@@ -29,6 +29,8 @@ CREATE TABLE UserAccount (
     phone VARCHAR(20),
     bio TEXT,
     profileImage TEXT,
+    latitude DECIMAL(9,6),
+    longitude DECIMAL(9,6),
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -67,6 +69,8 @@ CREATE TABLE Portfolio (
     shopAddress VARCHAR(200),
     city VARCHAR(100) NOT NULL,
     state VARCHAR(100) NOT NULL,
+    latitude DECIMAL(9,6),
+    longitude DECIMAL(9,6),
     description TEXT
 );
 
@@ -83,7 +87,8 @@ CREATE TABLE Service (
     ID SERIAL PRIMARY KEY,
     clipperID INT NOT NULL REFERENCES Clipper(ID) ON DELETE CASCADE,
     serviceName VARCHAR(100) NOT NULL,
-    price DECIMAL(6,2)
+    price DECIMAL(6,2),
+    durationMinutes INT
 );
 
 -- 9. Specialty Table (many-to-one with Clipper)
@@ -117,9 +122,9 @@ GRANT SELECT ON Specialty TO PUBLIC;
 GRANT SELECT ON Review TO PUBLIC;
 
 -- Sample data
-INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, createdAt) VALUES (1, 'Alice', 'Meijer', 'alice123', 'passAlice!', 'Client', 'Ali', '123 Pine St', 'Grand Rapids', 'MI', 'alice@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/alice.jpg', '2025-09-27 08:00:00');
-INSERT INTO UserAccount VALUES (2, 'Ben', 'Nelson', 'bennel', 'passBen!', 'Clipper', 'BennyFade', '45 Barber Ln', 'Grand Rapids', 'MI', 'ben@example.com', '616-222-2222', 'Professional barber with 5 years of experience.', 'https://example.com/ben.jpg', '2025-09-29 15:00:00');
-INSERT INTO UserAccount VALUES (3, 'Chris', 'Evans', 'chrisevans', 'passChris!', 'Clipper', 'CPStyles', '99 Main Ave', 'Grand Rapids', 'MI', 'chris@example.com', '616-333-3333', 'Specializes in fades and beard trims.', 'https://example.com/chris.jpg', '2025-09-30 11:00:00');
+INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, createdAt) VALUES (1, 'Alice', 'Meijer', 'alice123', 'passAlice!', 'Client', 'Ali', '123 Pine St', 'Grand Rapids', 'MI', 'alice@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/alice.jpg', 42.963795, -85.670006, '2025-09-27 08:00:00');
+INSERT INTO UserAccount VALUES (2, 'Ben', 'Nelson', 'bennel', 'passBen!', 'Clipper', 'BennyFade', '45 Barber Ln', 'Grand Rapids', 'MI', 'ben@example.com', '616-222-2222', 'Professional barber with 5 years of experience.', 'https://example.com/ben.jpg', NULL, NULL, '2025-09-29 15:00:00');
+INSERT INTO UserAccount VALUES (3, 'Chris', 'Evans', 'chrisevans', 'passChris!', 'Clipper', 'CPStyles', '99 Main Ave', 'Grand Rapids', 'MI', 'chris@example.com', '616-333-3333', 'Specializes in fades and beard trims.', 'https://example.com/chris.jpg', NULL, NULL, '2025-09-30 11:00:00');
 
 INSERT INTO Languages (userID, language) VALUES (1, 'English');
 INSERT INTO Languages (userID, language) VALUES (2, 'English');
@@ -134,8 +139,8 @@ INSERT INTO Clipper (ID, userID) VALUES (2, 3);
 INSERT INTO FavoriteClippers (clientID, clipperID, favoritedAt) VALUES (1, 1, '2025-10-12 09:00:00');
 INSERT INTO FavoriteClippers (clientID, clipperID, favoritedAt) VALUES (1, 2, '2025-10-12 11:00:00');
 
-INSERT INTO Portfolio (ID, clipperID, shopName, shopAddress, city, state, description) VALUES (1, 1, 'Ben’s Barber Studio', '45 Barber Ln', 'Grand Rapids', 'MI', 'A modern barber studio focusing on precision fades.');
-INSERT INTO Portfolio (ID, clipperID, shopName, shopAddress, city, state, description) VALUES (2, 2, 'Chris Cuts', '99 Main Ave', 'Grand Rapids', 'MI', 'Classic styles with a modern twist.');
+INSERT INTO Portfolio (ID, clipperID, shopName, shopAddress, city, state, description) VALUES (1, 1, 'Ben’s Barber Studio', '45 Barber Ln', 'Grand Rapids', 'MI', 42.964100, -85.670200, 'A modern barber studio focusing on precision fades.');
+INSERT INTO Portfolio (ID, clipperID, shopName, shopAddress, city, state, description) VALUES (2, 2, 'Chris Cuts', '99 Main Ave', 'Grand Rapids', 'MI', 42.964800, -85.668900, 'Classic styles with a modern twist.');
 
 INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (1, 1, 'https://example.com/ben_portfolio1.jpg', '2025-10-02 08:00:00');
 INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (2, 1, 'https://example.com/ben_portfolio2.jpg', '2025-10-02 08:15:00');
