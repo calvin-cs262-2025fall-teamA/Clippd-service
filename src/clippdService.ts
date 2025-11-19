@@ -32,26 +32,26 @@ import type { Request, Response, NextFunction } from "express";
 import type {
   UserAccount,
   UserAccountInput,
-  Clipper,
+  // Clipper,
   ClipperWithDetails,
-  FavoriteClipper,
+  // FavoriteClipper,
   Portfolio,
   PortfolioInput,
   Picture,
   Service,
   ServiceInput,
-  Review,
+  // Review,
   ReviewInput,
   ReviewWithDetails,
 } from "./types.js";
 
 // Set up the database
 const db = pgPromise()({
-  host: process.env.DB_SERVER,
+  host: process.env.DB_SERVER || "",
   port: parseInt(process.env.DB_PORT || "5432"),
-  database: process.env.DB_DATABASE,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE || "",
+  user: process.env.DB_USER || "",
+  password: process.env.DB_PASSWORD || "",
 });
 
 // Configure the server and its routes
@@ -70,6 +70,7 @@ router.post("/auth/signup", signup);
 router.post("/auth/login", login);
 
 // User routes
+router.get("/users", readUsers);
 router.get("/users/:id", readUser);
 router.put("/users/:id", updateUser);
 router.delete("/users/:id", deleteUser);
@@ -158,14 +159,10 @@ function signup(
 /**
  * Login user - validate credentials
  */
-function login(
-  request: Request,
-  response: Response,
-  next: NextFunction
-): void {
+function login(request: Request, response: Response, next: NextFunction): void {
   const { loginID, password } = request.body;
   db.oneOrNone(
-    "SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=\${loginID} AND passWord=\${password}",
+    "SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${password}",
     { loginID, password }
   )
     .then((data: Partial<UserAccount> | null): void => {
@@ -186,7 +183,7 @@ function readUser(
   response: Response,
   next: NextFunction
 ): void {
-  db.oneOrNone("SELECT * FROM UserAccount WHERE id=\${id}", request.params)
+  db.oneOrNone("SELECT * FROM UserAccount WHERE id=${id}", request.params)
     .then((data: UserAccount | null): void => {
       returnDataOr404(response, data);
     })
@@ -233,11 +230,30 @@ function deleteUser(
   next: NextFunction
 ): void {
   db.oneOrNone(
-    "DELETE FROM UserAccount WHERE id=\${id} RETURNING id",
+    "DELETE FROM UserAccount WHERE id=${id} RETURNING id",
     request.params
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
+    })
+    .catch((error: Error): void => {
+      next(error);
+    });
+}
+
+/**
+ * Get all users (without sensitive fields)
+ */
+function readUsers(
+  _request: Request,
+  response: Response,
+  next: NextFunction
+): void {
+  db.manyOrNone(
+    "SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount"
+  )
+    .then((data: Partial<UserAccount>[]): void => {
+      response.send(data);
     })
     .catch((error: Error): void => {
       next(error);
@@ -313,10 +329,9 @@ function createClipper(
   next: NextFunction
 ): void {
   const { userID } = request.body;
-  db.one(
-    "INSERT INTO Clipper(userID) VALUES (\${userID}) RETURNING id",
-    { userID }
-  )
+  db.one("INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id", {
+    userID,
+  })
     .then((data: { id: number }): void => {
       response.send(data);
     })
@@ -360,7 +375,7 @@ function deleteClipper(
   next: NextFunction
 ): void {
   db.oneOrNone(
-    "DELETE FROM Clipper WHERE id=\${id} RETURNING id",
+    "DELETE FROM Clipper WHERE id=${id} RETURNING id",
     request.params
   )
     .then((data: { id: number } | null): void => {
@@ -381,10 +396,7 @@ function readPortfolio(
   response: Response,
   next: NextFunction
 ): void {
-  db.oneOrNone(
-    "SELECT * FROM Portfolio WHERE clipperID=\${id}",
-    request.params
-  )
+  db.oneOrNone("SELECT * FROM Portfolio WHERE clipperID=${id}", request.params)
     .then((data: Portfolio | null): void => {
       returnDataOr404(response, data);
     })
@@ -457,7 +469,7 @@ function readPictures(
   next: NextFunction
 ): void {
   db.manyOrNone(
-    "SELECT * FROM Pictures WHERE portfolioID=\${id} ORDER BY addedAt DESC",
+    "SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC",
     request.params
   )
     .then((data: Picture[]): void => {
@@ -478,7 +490,7 @@ function addPicture(
 ): void {
   const { image } = request.body;
   db.one(
-    "INSERT INTO Pictures(portfolioID, image) VALUES (\${id}, \${image}) RETURNING id",
+    "INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id",
     { id: request.params.id, image }
   )
     .then((data: { id: number }): void => {
@@ -498,7 +510,7 @@ function deletePicture(
   next: NextFunction
 ): void {
   db.oneOrNone(
-    "DELETE FROM Pictures WHERE id=\${id} RETURNING id",
+    "DELETE FROM Pictures WHERE id=${id} RETURNING id",
     request.params
   )
     .then((data: { id: number } | null): void => {
@@ -519,10 +531,7 @@ function readServices(
   response: Response,
   next: NextFunction
 ): void {
-  db.manyOrNone(
-    "SELECT * FROM Service WHERE clipperID=\${id}",
-    request.params
-  )
+  db.manyOrNone("SELECT * FROM Service WHERE clipperID=${id}", request.params)
     .then((data: Service[]): void => {
       response.send(data);
     })
@@ -544,7 +553,7 @@ function addService(
     ...request.body,
   };
   db.one(
-    "INSERT INTO Service(clipperID, serviceName, price) VALUES (\${clipperID}, \${serviceName}, \${price}) RETURNING id",
+    "INSERT INTO Service(clipperID, serviceName, price) VALUES (${clipperID}, ${serviceName}, ${price}) RETURNING id",
     serviceData as ServiceInput
   )
     .then((data: { id: number }): void => {
@@ -590,7 +599,7 @@ function deleteService(
   next: NextFunction
 ): void {
   db.oneOrNone(
-    "DELETE FROM Service WHERE id=\${id} RETURNING id",
+    "DELETE FROM Service WHERE id=${id} RETURNING id",
     request.params
   )
     .then((data: { id: number } | null): void => {
@@ -644,7 +653,7 @@ function addReview(
     ...request.body,
   };
   db.one(
-    "INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (\${clientID}, \${clipperID}, \${rating}, \${comment}) RETURNING id",
+    "INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (${clientID}, ${clipperID}, ${rating}, ${comment}) RETURNING id",
     reviewData as ReviewInput
   )
     .then((data: { id: number }): void => {
@@ -663,10 +672,7 @@ function deleteReview(
   response: Response,
   next: NextFunction
 ): void {
-  db.oneOrNone(
-    "DELETE FROM Review WHERE id=\${id} RETURNING id",
-    request.params
-  )
+  db.oneOrNone("DELETE FROM Review WHERE id=${id} RETURNING id", request.params)
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
     })
@@ -717,7 +723,7 @@ function addFavorite(
   next: NextFunction
 ): void {
   db.one(
-    "INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (\${clientId}, \${clipperId}) RETURNING clientID, clipperID",
+    "INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID",
     request.params
   )
     .then((data: { clientid: number; clipperid: number }): void => {
@@ -737,7 +743,7 @@ function removeFavorite(
   next: NextFunction
 ): void {
   db.oneOrNone(
-    "DELETE FROM FavoriteClippers WHERE clientID=\${clientId} AND clipperID=\${clipperId} RETURNING clientID",
+    "DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID",
     request.params
   )
     .then((data: { clientid: number } | null): void => {
