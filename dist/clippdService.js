@@ -32,6 +32,9 @@ const db = pgPromise()({
     database: process.env.DB_DATABASE || "",
     user: process.env.DB_USER || "",
     password: process.env.DB_PASSWORD || "",
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 // Configure the server and its routes
 const app = express();
@@ -45,6 +48,7 @@ router.get("/", readHello);
 router.post("/auth/signup", signup);
 router.post("/auth/login", login);
 // User routes
+router.get("/users", readUsers);
 router.get("/users/:id", readUser);
 router.put("/users/:id", updateUser);
 router.delete("/users/:id", deleteUser);
@@ -165,6 +169,18 @@ function deleteUser(request, response, next) {
     db.oneOrNone("DELETE FROM UserAccount WHERE id=${id} RETURNING id", request.params)
         .then((data) => {
         returnDataOr404(response, data);
+    })
+        .catch((error) => {
+        next(error);
+    });
+}
+/**
+ * Get all users (without sensitive fields)
+ */
+function readUsers(_request, response, next) {
+    db.manyOrNone("SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount")
+        .then((data) => {
+        response.send(data);
     })
         .catch((error) => {
         next(error);
