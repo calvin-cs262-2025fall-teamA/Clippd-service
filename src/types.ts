@@ -1,30 +1,33 @@
 /**
  * Type definitions for the Clippd database entities.
+ * Fields match the `Clippd.sql` schema (camelCase names used in code).
  */
 
 export interface UserAccount {
   id: number;
-  firstname: string;
-  lastname: string;
-  loginid: string;
-  password: string;
+  firstName: string;
+  lastName: string;
+  loginID: string;
+  passWord: string;
   role: "Client" | "Clipper";
   nickname?: string;
   address?: string;
   city: string;
   state: string;
-  emailaddress: string;
+  emailAddress: string;
   phone?: string;
   bio?: string;
-  profileimage?: string;
-  createdat: Date;
+  profileImage?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  createdAt: Date;
 }
 
 export interface UserAccountInput {
   firstName: string;
   lastName: string;
   loginID: string;
-  password: string;
+  password: string; // mapped to passWord in DB
   role: "Client" | "Clipper";
   nickname?: string;
   address?: string;
@@ -37,47 +40,49 @@ export interface UserAccountInput {
 }
 
 export interface Language {
-  userid: number;
+  userID: number;
   language: string;
 }
 
 export interface Client {
   id: number;
-  userid: number;
+  userID: number;
 }
 
 export interface Clipper {
   id: number;
-  userid: number;
+  userID: number;
 }
 
 export interface ClipperWithDetails extends Clipper {
-  firstname?: string;
-  lastname?: string;
-  emailaddress?: string;
+  firstName?: string;
+  lastName?: string;
+  emailAddress?: string;
   city?: string;
   state?: string;
   bio?: string;
-  profileimage?: string;
-  shopname?: string;
-  shopaddress?: string;
+  profileImage?: string;
+  shopName?: string;
+  shopAddress?: string;
   description?: string;
   rating?: number;
 }
 
 export interface FavoriteClipper {
-  clientid: number;
-  clipperid: number;
-  favoritedat: Date;
+  clientID: number;
+  clipperID: number;
+  favoritedAt: Date;
 }
 
 export interface Portfolio {
   id: number;
-  clipperid: number;
-  shopname: string;
-  shopaddress?: string;
+  clipperID: number;
+  shopName: string;
+  shopAddress?: string;
   city: string;
   state: string;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string;
 }
 
@@ -88,41 +93,45 @@ export interface PortfolioInput {
   city: string;
   state: string;
   description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface Picture {
   id: number;
-  portfolioid: number;
+  portfolioID: number;
   image: string;
-  addedat: Date;
+  addedAt: Date;
 }
 
 export interface Service {
   id: number;
-  clipperid: number;
-  servicename: string;
-  price: number;
+  clipperID: number;
+  serviceName: string;
+  price?: number;
+  durationMinutes?: number | null;
 }
 
 export interface ServiceInput {
   clipperID: number;
   serviceName: string;
-  price: number;
+  price?: number;
+  durationMinutes?: number | null;
 }
 
 export interface Specialty {
   id: number;
-  clipperid: number;
-  hairtype: string;
+  clipperID: number;
+  hairType: string;
 }
 
 export interface Review {
   id: number;
-  clientid: number;
-  clipperid: number;
+  clientID: number;
+  clipperID: number;
   rating: number;
   comment?: string;
-  createdat: Date;
+  createdAt: Date;
 }
 
 export interface ReviewInput {
@@ -133,6 +142,6 @@ export interface ReviewInput {
 }
 
 export interface ReviewWithDetails extends Review {
-  reviewername?: string;
-  reviewercity?: string;
+  reviewerName?: string;
+  reviewerCity?: string;
 }
