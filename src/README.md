@@ -8,11 +8,11 @@ npm install cors express pg-promise dotenv
 * If you don't already have one, create a `.env` file in the project root and include your database connection variables (DB host, port, user, password, database name, etc.).
 
 ### 3. Allow your local machine to access the Azure PostgreSQL database
-* Go to **Azure Portal → Your PostgreSQL Server → Networking (Firewall Rules)**
+* Go to **Azure Portal → Your PostgreSQL Database → Networking (Firewall Rules)**
 * Add your **current public IP address**
 * **Click the “Save”** button at the top left (easy to forget!)
 
-### 4. Build your project before starting
+### 4. Build your project before starting (Do this whenever you make any changes to clippdService.ts)
 ```
 npm run build
 ```

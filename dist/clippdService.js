@@ -79,6 +79,10 @@ router.delete("/reviews/:id", deleteReview);
 router.get("/clients/:id/favorites", readFavorites);
 router.post("/clients/:clientId/favorites/:clipperId", addFavorite);
 router.delete("/clients/:clientId/favorites/:clipperId", removeFavorite);
+// Specialty routes
+router.get("/clippers/:id/specialties", readSpecialties);
+router.post("/clippers/:id/specialties", addSpecialty);
+router.delete("/specialties/:id", deleteSpecialty);
 app.use(router);
 app.listen(port, "0.0.0.0", () => {
     console.log(`Listening on port ${port} on all network interfaces`);
@@ -106,7 +110,7 @@ function readHello(_request, response) {
  */
 function signup(request, response, next) {
     db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
-     VALUES (\${firstName}, \${lastName}, \${loginID}, \${password}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
+     VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
      RETURNING id`, request.body)
         .then((data) => {
         response.send(data);
@@ -120,7 +124,7 @@ function signup(request, response, next) {
  */
 function login(request, response, next) {
     const { loginID, password } = request.body;
-    db.oneOrNone("SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${password}", { loginID, password })
+    db.oneOrNone("SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${passWord}", { loginID, password })
         .then((data) => {
         returnDataOr404(response, data);
     })
@@ -296,8 +300,8 @@ function createPortfolio(request, response, next) {
         ...request.body,
         clipperID: request.params.id,
     };
-    db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, description)
-     VALUES (\${clipperID}, \${shopName}, \${shopAddress}, \${city}, \${state}, \${description})
+    db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
+     VALUES (\${clipperID}, \${shopName}, \${shopAddress}, \${city}, \${state}, \${latitude}, \${longitude}, \${description})
      RETURNING id`, portfolioData)
         .then((data) => {
         response.send(data);
@@ -312,7 +316,7 @@ function createPortfolio(request, response, next) {
 function updatePortfolio(request, response, next) {
     db.oneOrNone(`UPDATE Portfolio 
      SET shopName=\${body.shopName}, shopAddress=\${body.shopAddress},
-         city=\${body.city}, state=\${body.state}, description=\${body.description}
+        city=\${body.city}, state=\${body.state}, latitude=\${body.latitude}, longitude=\${body.longitude}, description=\${body.description}
      WHERE id=\${params.id}
      RETURNING id`, {
         params: request.params,
@@ -384,7 +388,7 @@ function addService(request, response, next) {
         clipperID: request.params.id,
         ...request.body,
     };
-    db.one("INSERT INTO Service(clipperID, serviceName, price) VALUES (${clipperID}, ${serviceName}, ${price}) RETURNING id", serviceData)
+    db.one("INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id", serviceData)
         .then((data) => {
         response.send(data);
     })
@@ -397,7 +401,7 @@ function addService(request, response, next) {
  */
 function updateService(request, response, next) {
     db.oneOrNone(`UPDATE Service 
-     SET serviceName=\${body.serviceName}, price=\${body.price}
+     SET serviceName=\${body.serviceName}, price=\${body.price}, durationMinutes=\${body.durationMinutes}
      WHERE id=\${params.id}
      RETURNING id`, {
         params: request.params,
@@ -480,6 +484,7 @@ function readFavorites(request, response, next) {
       c.id, c.userid,
       u.firstName, u.lastName, u.city, u.state, u.profileImage,
       p.shopName,
+      fc.favoritedAt,
       COALESCE(AVG(r.rating), 0) as rating
     FROM FavoriteClippers fc
     JOIN Clipper c ON fc.clipperID = c.id
@@ -487,7 +492,8 @@ function readFavorites(request, response, next) {
     LEFT JOIN Portfolio p ON c.id = p.clipperID
     LEFT JOIN Review r ON c.id = r.clipperID
     WHERE fc.clientID=\${id}
-    GROUP BY c.id, u.id, p.id`, request.params)
+    GROUP BY c.id, u.id, p.id
+    ORDER BY fc.favoritedAt DESC`, request.params)
         .then((data) => {
         response.send(data);
     })
@@ -518,4 +524,33 @@ function removeFavorite(request, response, next) {
         .catch((error) => {
         next(error);
     });
+}
+// ==================== SPECIALTIES ====================
+/*
+* Get all specialties for a clipper
+*/
+function readSpecialties(request, response, next) {
+    db.manyOrNone("SELECT * FROM Specialty WHERE clipperID=${id}", request.params)
+        .then((data) => response.send(data))
+        .catch(next);
+}
+/*
+* Add specialty for a clipper
+*/
+function addSpecialty(request, response, next) {
+    const data = {
+        clipperID: request.params.id,
+        hairType: request.body.hairType,
+    };
+    db.one("INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id", data)
+        .then((data) => response.send(data))
+        .catch(next);
+}
+/*
+* Delete specialty
+*/
+function deleteSpecialty(request, response, next) {
+    db.oneOrNone("DELETE FROM Specialty WHERE id=${id} RETURNING id", request.params)
+        .then((data) => returnDataOr404(response, data))
+        .catch(next);
 }

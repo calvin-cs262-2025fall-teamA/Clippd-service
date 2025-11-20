@@ -71,7 +71,9 @@ CREATE TABLE Portfolio (
     state VARCHAR(100) NOT NULL,
     latitude DECIMAL(9,6),
     longitude DECIMAL(9,6),
-    description TEXT
+    description TEXT,
+
+    CONSTRAINT unique_clipID UNIQUE (clipperID) -- Ensure one portfolio per clipper
 );
 
 -- 7. Pictures Table (many-to-one with Portfolio)
