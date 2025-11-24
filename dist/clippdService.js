@@ -91,11 +91,12 @@ app.listen(port, '0.0.0.0', () => {
  * Utility function to standardize response pattern for database queries.
  */
 function returnDataOr404(response, data) {
-  if (data === null) {
+  // Use explicit null/undefined check to satisfy ESLint eqeqeq rule.
+  if (data === null || data === undefined) {
     response.sendStatus(404);
-  } else {
-    response.send(data);
+    return;
   }
+  response.send(data);
 }
 /**
  * Root endpoint - health check
@@ -191,9 +192,10 @@ function readUsers(_request, response, next) {
 }
 // ==================== CLIPPER CRUD ====================
 /**
- * Get all clippers with their details
+ * Get all clippers with their details including portfolio images
  */
 function readClippers(_request, response, next) {
+  // First get all clippers with their basic info
   db.manyOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
@@ -204,8 +206,20 @@ function readClippers(_request, response, next) {
     LEFT JOIN Portfolio p ON c.id = p.clipperID
     LEFT JOIN Review r ON c.id = r.clipperID
     GROUP BY c.id, u.id, p.id`)
-    .then((data) => {
-      response.send(data);
+    .then(async (clippers) => {
+      // For each clipper, fetch their portfolio images
+      const clippersWithImages = await Promise.all(clippers.map(async (clipper) => {
+        const images = await db.manyOrNone(`SELECT pic.image 
+             FROM Pictures pic
+             JOIN Portfolio p ON pic.portfolioID = p.id
+             WHERE p.clipperID = $1
+             ORDER BY pic.addedAt`, [clipper.id]);
+        return {
+          ...clipper,
+          images: images.map((img) => img.image),
+        };
+      }));
+      response.send(clippersWithImages);
     })
     .catch((error) => {
       next(error);
@@ -526,16 +540,16 @@ function removeFavorite(request, response, next) {
 }
 // ==================== SPECIALTIES ====================
 /*
-* Get all specialties for a clipper
-*/
+ * Get all specialties for a clipper
+ */
 function readSpecialties(request, response, next) {
   db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
     .then((data) => response.send(data))
     .catch(next);
 }
 /*
-* Add specialty for a clipper
-*/
+ * Add specialty for a clipper
+ */
 function addSpecialty(request, response, next) {
   const data = {
     clipperID: request.params.id,
@@ -546,8 +560,8 @@ function addSpecialty(request, response, next) {
     .catch(next);
 }
 /*
-* Delete specialty
-*/
+ * Delete specialty
+ */
 function deleteSpecialty(request, response, next) {
   db.oneOrNone('DELETE FROM Specialty WHERE id=${id} RETURNING id', request.params)
     .then((data) => returnDataOr404(response, data))

@@ -116,7 +116,6 @@ router.get('/clippers/:id/specialties', readSpecialties);
 router.post('/clippers/:id/specialties', addSpecialty);
 router.delete('/specialties/:id', deleteSpecialty);
 
-
 app.use(router);
 
 app.listen(port, '0.0.0.0', (): void => {
@@ -274,13 +273,14 @@ function readUsers(
 // ==================== CLIPPER CRUD ====================
 
 /**
- * Get all clippers with their details
+ * Get all clippers with their details including portfolio images
  */
 function readClippers(
   _request: Request,
   response: Response,
   next: NextFunction,
 ): void {
+  // First get all clippers with their basic info
   db.manyOrNone(
     `SELECT 
       c.id, c.userid,
@@ -293,8 +293,27 @@ function readClippers(
     LEFT JOIN Review r ON c.id = r.clipperID
     GROUP BY c.id, u.id, p.id`,
   )
-    .then((data: ClipperWithDetails[]): void => {
-      response.send(data);
+    .then(async (clippers: ClipperWithDetails[]): Promise<void> => {
+      // For each clipper, fetch their portfolio images
+      const clippersWithImages = await Promise.all(
+        clippers.map(async (clipper) => {
+          const images = await db.manyOrNone(
+            `SELECT pic.image 
+             FROM Pictures pic
+             JOIN Portfolio p ON pic.portfolioID = p.id
+             WHERE p.clipperID = $1
+             ORDER BY pic.addedAt`,
+            [clipper.id],
+          );
+
+          return {
+            ...clipper,
+            images: images.map((img: { image: string }) => img.image),
+          };
+        }),
+      );
+
+      response.send(clippersWithImages);
     })
     .catch((error: Error): void => {
       next(error);
@@ -770,21 +789,26 @@ function removeFavorite(
 // ==================== SPECIALTIES ====================
 
 /*
-* Get all specialties for a clipper
-*/
-function readSpecialties(request: Request, response: Response, next: NextFunction): void {
-  db.manyOrNone(
-    'SELECT * FROM Specialty WHERE clipperID=${id}',
-    request.params,
-  )
+ * Get all specialties for a clipper
+ */
+function readSpecialties(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
     .then((data) => response.send(data))
     .catch(next);
 }
 
 /*
-* Add specialty for a clipper
-*/
-function addSpecialty(request: Request, response: Response, next: NextFunction): void {
+ * Add specialty for a clipper
+ */
+function addSpecialty(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
   const data = {
     clipperID: request.params.id,
     hairType: request.body.hairType,
@@ -799,9 +823,13 @@ function addSpecialty(request: Request, response: Response, next: NextFunction):
 }
 
 /*
-* Delete specialty
-*/
-function deleteSpecialty(request: Request, response: Response, next: NextFunction): void {
+ * Delete specialty
+ */
+function deleteSpecialty(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
   db.oneOrNone(
     'DELETE FROM Specialty WHERE id=${id} RETURNING id',
     request.params,
