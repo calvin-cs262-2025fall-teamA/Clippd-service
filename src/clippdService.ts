@@ -294,9 +294,10 @@ function readClippers(
     GROUP BY c.id, u.id, p.id`,
   )
     .then(async (clippers: ClipperWithDetails[]): Promise<void> => {
-      // For each clipper, fetch their portfolio images
-      const clippersWithImages = await Promise.all(
+      // For each clipper, fetch their portfolio images and reviews
+      const clippersWithImagesAndReviews = await Promise.all(
         clippers.map(async (clipper) => {
+          // Fetch images
           const images = await db.manyOrNone(
             `SELECT pic.image 
              FROM Pictures pic
@@ -306,14 +307,32 @@ function readClippers(
             [clipper.id],
           );
 
+          // Fetch reviews with reviewer info
+          const reviews = await db.manyOrNone(
+            `SELECT 
+              r.id, 
+              r.clientID,
+              r.clipperID, 
+              r.rating, 
+              r.comment as "reviewContent",
+              r.createdAt as "date",
+              COALESCE(cl."firstName" || ' ' || cl."lastName", 'Anonymous') as "reviewerName"
+            FROM Review r
+            LEFT JOIN Client cl ON r.clientID = cl.id
+            WHERE r.clipperID = $1
+            ORDER BY r.createdAt DESC`,
+            [clipper.id],
+          );
+
           return {
             ...clipper,
             images: images.map((img: { image: string }) => img.image),
+            reviews: reviews || [],
           };
         }),
       );
 
-      response.send(clippersWithImages);
+      response.send(clippersWithImagesAndReviews);
     })
     .catch((error: Error): void => {
       next(error);
