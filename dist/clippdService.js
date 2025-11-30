@@ -21,20 +21,20 @@
  * @author: Team A
  * @date: Fall, 2025
  */
-import express from "express";
-import cors from "cors";
-import pgPromise from "pg-promise";
-import "dotenv/config";
+import express from 'express';
+import cors from 'cors';
+import pgPromise from 'pg-promise';
+import 'dotenv/config';
 // Set up the database
 const db = pgPromise()({
-    host: process.env.DB_SERVER || "",
-    port: parseInt(process.env.DB_PORT || "5432"),
-    database: process.env.DB_DATABASE || "",
-    user: process.env.DB_USER || "",
-    password: process.env.DB_PASSWORD || "",
-    ssl: {
-        rejectUnauthorized: false,
-    },
+  host: process.env.DB_SERVER || '',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_DATABASE || '',
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 // Configure the server and its routes
 const app = express();
@@ -43,93 +43,93 @@ const router = express.Router();
 app.use(cors());
 router.use(express.json());
 // Root endpoint
-router.get("/", readHello);
+router.get('/', readHello);
 // Authentication routes
-router.post("/auth/signup", signup);
-router.post("/auth/login", login);
+router.post('/auth/signup', signup);
+router.post('/auth/login', login);
 // User routes
-router.get("/users", readUsers);
-router.get("/users/:id", readUser);
-router.put("/users/:id", updateUser);
-router.delete("/users/:id", deleteUser);
+router.get('/users', readUsers);
+router.get('/users/:id', readUser);
+router.put('/users/:id', updateUser);
+router.delete('/users/:id', deleteUser);
 // Clipper routes
-router.get("/clippers", readClippers);
-router.get("/clippers/:id", readClipper);
-router.post("/clippers", createClipper);
-router.put("/clippers/:id", updateClipper);
-router.delete("/clippers/:id", deleteClipper);
+router.get('/clippers', readClippers);
+router.get('/clippers/:id', readClipper);
+router.post('/clippers', createClipper);
+router.put('/clippers/:id', updateClipper);
+router.delete('/clippers/:id', deleteClipper);
 // Portfolio routes
-router.get("/clippers/:id/portfolio", readPortfolio);
-router.post("/clippers/:id/portfolio", createPortfolio);
-router.put("/portfolio/:id", updatePortfolio);
+router.get('/clippers/:id/portfolio', readPortfolio);
+router.post('/clippers/:id/portfolio', createPortfolio);
+router.put('/portfolio/:id', updatePortfolio);
 // Picture routes
-router.get("/portfolio/:id/pictures", readPictures);
-router.post("/portfolio/:id/pictures", addPicture);
-router.delete("/pictures/:id", deletePicture);
+router.get('/portfolio/:id/pictures', readPictures);
+router.post('/portfolio/:id/pictures', addPicture);
+router.delete('/pictures/:id', deletePicture);
 // Service routes
-router.get("/clippers/:id/services", readServices);
-router.post("/clippers/:id/services", addService);
-router.put("/services/:id", updateService);
-router.delete("/services/:id", deleteService);
+router.get('/clippers/:id/services', readServices);
+router.post('/clippers/:id/services', addService);
+router.put('/services/:id', updateService);
+router.delete('/services/:id', deleteService);
 // Review routes
-router.get("/clippers/:id/reviews", readReviews);
-router.post("/clippers/:id/reviews", addReview);
-router.delete("/reviews/:id", deleteReview);
+router.get('/clippers/:id/reviews', readReviews);
+router.post('/clippers/:id/reviews', addReview);
+router.delete('/reviews/:id', deleteReview);
 // Favorites routes
-router.get("/clients/:id/favorites", readFavorites);
-router.post("/clients/:clientId/favorites/:clipperId", addFavorite);
-router.delete("/clients/:clientId/favorites/:clipperId", removeFavorite);
+router.get('/clients/:id/favorites', readFavorites);
+router.post('/clients/:clientId/favorites/:clipperId', addFavorite);
+router.delete('/clients/:clientId/favorites/:clipperId', removeFavorite);
 // Specialty routes
-router.get("/clippers/:id/specialties", readSpecialties);
-router.post("/clippers/:id/specialties", addSpecialty);
-router.delete("/specialties/:id", deleteSpecialty);
+router.get('/clippers/:id/specialties', readSpecialties);
+router.post('/clippers/:id/specialties', addSpecialty);
+router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
-app.listen(port, "0.0.0.0", () => {
-    console.log(`Listening on port ${port} on all network interfaces`);
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Listening on port ${port} on all network interfaces`);
 });
 /**
  * Utility function to standardize response pattern for database queries.
  */
 function returnDataOr404(response, data) {
-    // Use explicit null/undefined check to satisfy ESLint eqeqeq rule.
-    if (data === null || data === undefined) {
-        response.sendStatus(404);
-        return;
-    }
-    response.send(data);
+  // Use explicit null/undefined check to satisfy ESLint eqeqeq rule.
+  if (data === null || data === undefined) {
+    response.sendStatus(404);
+    return;
+  }
+  response.send(data);
 }
 /**
  * Root endpoint - health check
  */
 function readHello(_request, response) {
-    response.send("Hello, Clippd service!");
+  response.send('Hello, Clippd service!');
 }
 // ==================== AUTHENTICATION ====================
 /**
  * Sign up a new user
  */
 function signup(request, response, next) {
-    db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
+  db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
      VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
      RETURNING id`, request.body)
-        .then((data) => {
-        response.send(data);
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Login user - validate credentials
  */
 function login(request, response, next) {
-    const { loginID, password } = request.body;
-    db.oneOrNone("SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${passWord}", { loginID, password })
-        .then((data) => {
-        returnDataOr404(response, data);
+  const { loginID, password } = request.body;
+  db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${passWord}', { loginID, password })
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== USER CRUD ====================
@@ -137,57 +137,57 @@ function login(request, response, next) {
  * Get user by ID
  */
 function readUser(request, response, next) {
-    db.oneOrNone("SELECT * FROM UserAccount WHERE id=${id}", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('SELECT * FROM UserAccount WHERE id=${id}', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Update user information
  */
 function updateUser(request, response, next) {
-    db.oneOrNone(`UPDATE UserAccount 
+  db.oneOrNone(`UPDATE UserAccount 
      SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
          emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
          bio=\${body.bio}, profileImage=\${body.profileImage},
          city=\${body.city}, state=\${body.state}
      WHERE id=\${params.id} 
      RETURNING id`, {
-        params: request.params,
-        body: request.body,
+    params: request.params,
+    body: request.body,
+  })
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .then((data) => {
-        returnDataOr404(response, data);
-    })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Delete user account
  */
 function deleteUser(request, response, next) {
-    db.oneOrNone("DELETE FROM UserAccount WHERE id=${id} RETURNING id", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM UserAccount WHERE id=${id} RETURNING id', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Get all users (without sensitive fields)
  */
 function readUsers(_request, response, next) {
-    db.manyOrNone("SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount")
-        .then((data) => {
-        response.send(data);
+  db.manyOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount')
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== CLIPPER CRUD ====================
@@ -195,8 +195,8 @@ function readUsers(_request, response, next) {
  * Get all clippers with their details including portfolio images
  */
 function readClippers(_request, response, next) {
-    // First get all clippers with their basic info
-    db.manyOrNone(`SELECT 
+  // First get all clippers with their basic info
+  db.manyOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
@@ -206,17 +206,17 @@ function readClippers(_request, response, next) {
     LEFT JOIN Portfolio p ON c.id = p.clipperID
     LEFT JOIN Review r ON c.id = r.clipperID
     GROUP BY c.id, u.id, p.id`)
-        .then(async (clippers) => {
-        // For each clipper, fetch their portfolio images and reviews
-        const clippersWithImagesAndReviews = await Promise.all(clippers.map(async (clipper) => {
-            // Fetch images
-            const images = await db.manyOrNone(`SELECT pic.image 
+    .then(async (clippers) => {
+      // For each clipper, fetch their portfolio images and reviews
+      const clippersWithImagesAndReviews = await Promise.all(clippers.map(async (clipper) => {
+        // Fetch images
+        const images = await db.manyOrNone(`SELECT pic.image 
              FROM Pictures pic
              JOIN Portfolio p ON pic.portfolioID = p.id
              WHERE p.clipperID = $1
              ORDER BY pic.addedAt`, [clipper.id]);
-            // Fetch reviews with reviewer info
-            const reviews = await db.manyOrNone(`SELECT 
+        // Fetch reviews with reviewer info
+        const reviews = await db.manyOrNone(`SELECT 
               r.id, 
               r.clientID,
               r.clipperID, 
@@ -229,23 +229,23 @@ function readClippers(_request, response, next) {
             LEFT JOIN UserAccount u ON cl.userID = u.id
             WHERE r.clipperID = $1
             ORDER BY r.createdAt DESC`, [clipper.id]);
-            return {
-                ...clipper,
-                images: images.map((img) => img.image),
-                reviews: reviews || [],
-            };
-        }));
-        response.send(clippersWithImagesAndReviews);
+        return {
+          ...clipper,
+          images: images.map((img) => img.image),
+          reviews: reviews || [],
+        };
+      }));
+      response.send(clippersWithImagesAndReviews);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Get single clipper with details
  */
 function readClipper(request, response, next) {
-    db.oneOrNone(`SELECT 
+  db.oneOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
@@ -256,56 +256,56 @@ function readClipper(request, response, next) {
     LEFT JOIN Review r ON c.id = r.clipperID
     WHERE c.id=\${id}
     GROUP BY c.id, u.id, p.id`, request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Create clipper profile (assumes user already exists)
  */
 function createClipper(request, response, next) {
-    const { userID } = request.body;
-    db.one("INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id", {
-        userID,
+  const { userID } = request.body;
+  db.one('INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id', {
+    userID,
+  })
+    .then((data) => {
+      response.send(data);
     })
-        .then((data) => {
-        response.send(data);
-    })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Update clipper (updates associated user account)
  */
 function updateClipper(request, response, next) {
-    db.oneOrNone(`UPDATE UserAccount 
+  db.oneOrNone(`UPDATE UserAccount 
      SET bio=\${body.bio}, profileImage=\${body.profileImage}
      WHERE id=(SELECT userID FROM Clipper WHERE id=\${params.id})
      RETURNING id`, {
-        params: request.params,
-        body: request.body,
+    params: request.params,
+    body: request.body,
+  })
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .then((data) => {
-        returnDataOr404(response, data);
-    })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Delete clipper profile
  */
 function deleteClipper(request, response, next) {
-    db.oneOrNone("DELETE FROM Clipper WHERE id=${id} RETURNING id", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM Clipper WHERE id=${id} RETURNING id', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== PORTFOLIO ====================
@@ -313,49 +313,49 @@ function deleteClipper(request, response, next) {
  * Get clipper's portfolio
  */
 function readPortfolio(request, response, next) {
-    db.oneOrNone("SELECT * FROM Portfolio WHERE clipperID=${id}", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('SELECT * FROM Portfolio WHERE clipperID=${id}', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Create portfolio for clipper
  */
 function createPortfolio(request, response, next) {
-    const portfolioData = {
-        ...request.body,
-        clipperID: request.params.id,
-    };
-    db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
+  const portfolioData = {
+    ...request.body,
+    clipperID: request.params.id,
+  };
+  db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
      VALUES (\${clipperID}, \${shopName}, \${shopAddress}, \${city}, \${state}, \${latitude}, \${longitude}, \${description})
      RETURNING id`, portfolioData)
-        .then((data) => {
-        response.send(data);
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Update portfolio
  */
 function updatePortfolio(request, response, next) {
-    db.oneOrNone(`UPDATE Portfolio 
+  db.oneOrNone(`UPDATE Portfolio 
      SET shopName=\${body.shopName}, shopAddress=\${body.shopAddress},
         city=\${body.city}, state=\${body.state}, latitude=\${body.latitude}, longitude=\${body.longitude}, description=\${body.description}
      WHERE id=\${params.id}
      RETURNING id`, {
-        params: request.params,
-        body: request.body,
+    params: request.params,
+    body: request.body,
+  })
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .then((data) => {
-        returnDataOr404(response, data);
-    })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== PICTURES ====================
@@ -363,37 +363,37 @@ function updatePortfolio(request, response, next) {
  * Get all pictures for a portfolio
  */
 function readPictures(request, response, next) {
-    db.manyOrNone("SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC", request.params)
-        .then((data) => {
-        response.send(data);
+  db.manyOrNone('SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC', request.params)
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Add picture to portfolio
  */
 function addPicture(request, response, next) {
-    const { image } = request.body;
-    db.one("INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id", { id: request.params.id, image })
-        .then((data) => {
-        response.send(data);
+  const { image } = request.body;
+  db.one('INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id', { id: request.params.id, image })
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Delete picture
  */
 function deletePicture(request, response, next) {
-    db.oneOrNone("DELETE FROM Pictures WHERE id=${id} RETURNING id", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM Pictures WHERE id=${id} RETURNING id', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== SERVICES ====================
@@ -401,58 +401,58 @@ function deletePicture(request, response, next) {
  * Get all services for a clipper
  */
 function readServices(request, response, next) {
-    db.manyOrNone("SELECT * FROM Service WHERE clipperID=${id}", request.params)
-        .then((data) => {
-        response.send(data);
+  db.manyOrNone('SELECT * FROM Service WHERE clipperID=${id}', request.params)
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Add service for clipper
  */
 function addService(request, response, next) {
-    const serviceData = {
-        clipperID: request.params.id,
-        ...request.body,
-    };
-    db.one("INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id", serviceData)
-        .then((data) => {
-        response.send(data);
+  const serviceData = {
+    clipperID: request.params.id,
+    ...request.body,
+  };
+  db.one('INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id', serviceData)
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Update service
  */
 function updateService(request, response, next) {
-    db.oneOrNone(`UPDATE Service 
+  db.oneOrNone(`UPDATE Service 
      SET serviceName=\${body.serviceName}, price=\${body.price}, durationMinutes=\${body.durationMinutes}
      WHERE id=\${params.id}
      RETURNING id`, {
-        params: request.params,
-        body: request.body,
+    params: request.params,
+    body: request.body,
+  })
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .then((data) => {
-        returnDataOr404(response, data);
-    })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Delete service
  */
 function deleteService(request, response, next) {
-    db.oneOrNone("DELETE FROM Service WHERE id=${id} RETURNING id", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM Service WHERE id=${id} RETURNING id', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== REVIEWS ====================
@@ -460,7 +460,7 @@ function deleteService(request, response, next) {
  * Get all reviews for a clipper
  */
 function readReviews(request, response, next) {
-    db.manyOrNone(`SELECT 
+  db.manyOrNone(`SELECT 
       r.id, r.rating, r.comment, r.createdAt,
       u.firstName || ' ' || u.lastName as reviewerName,
       u.city as reviewerCity
@@ -469,39 +469,39 @@ function readReviews(request, response, next) {
     JOIN UserAccount u ON c.userID = u.id
     WHERE r.clipperID=\${id}
     ORDER BY r.createdAt DESC`, request.params)
-        .then((data) => {
-        response.send(data);
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Add review for clipper
  */
 function addReview(request, response, next) {
-    const reviewData = {
-        clipperID: request.params.id,
-        ...request.body,
-    };
-    db.one("INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (${clientID}, ${clipperID}, ${rating}, ${comment}) RETURNING id", reviewData)
-        .then((data) => {
-        response.send(data);
+  const reviewData = {
+    clipperID: request.params.id,
+    ...request.body,
+  };
+  db.one('INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (${clientID}, ${clipperID}, ${rating}, ${comment}) RETURNING id', reviewData)
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Delete review
  */
 function deleteReview(request, response, next) {
-    db.oneOrNone("DELETE FROM Review WHERE id=${id} RETURNING id", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM Review WHERE id=${id} RETURNING id', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== FAVORITES ====================
@@ -509,7 +509,7 @@ function deleteReview(request, response, next) {
  * Get all favorite clippers for a client
  */
 function readFavorites(request, response, next) {
-    db.manyOrNone(`SELECT 
+  db.manyOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.city, u.state, u.profileImage,
       p.shopName,
@@ -523,35 +523,35 @@ function readFavorites(request, response, next) {
     WHERE fc.clientID=\${id}
     GROUP BY c.id, u.id, p.id
     ORDER BY fc.favoritedAt DESC`, request.params)
-        .then((data) => {
-        response.send(data);
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Add clipper to favorites
  */
 function addFavorite(request, response, next) {
-    db.one("INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID", request.params)
-        .then((data) => {
-        response.send(data);
+  db.one('INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID', request.params)
+    .then((data) => {
+      response.send(data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 /**
  * Remove clipper from favorites
  */
 function removeFavorite(request, response, next) {
-    db.oneOrNone("DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID", request.params)
-        .then((data) => {
-        returnDataOr404(response, data);
+  db.oneOrNone('DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID', request.params)
+    .then((data) => {
+      returnDataOr404(response, data);
     })
-        .catch((error) => {
-        next(error);
+    .catch((error) => {
+      next(error);
     });
 }
 // ==================== SPECIALTIES ====================
@@ -559,27 +559,27 @@ function removeFavorite(request, response, next) {
  * Get all specialties for a clipper
  */
 function readSpecialties(request, response, next) {
-    db.manyOrNone("SELECT * FROM Specialty WHERE clipperID=${id}", request.params)
-        .then((data) => response.send(data))
-        .catch(next);
+  db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
+    .then((data) => response.send(data))
+    .catch(next);
 }
 /*
  * Add specialty for a clipper
  */
 function addSpecialty(request, response, next) {
-    const data = {
-        clipperID: request.params.id,
-        hairType: request.body.hairType,
-    };
-    db.one("INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id", data)
-        .then((data) => response.send(data))
-        .catch(next);
+  const data = {
+    clipperID: request.params.id,
+    hairType: request.body.hairType,
+  };
+  db.one('INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id', data)
+    .then((data) => response.send(data))
+    .catch(next);
 }
 /*
  * Delete specialty
  */
 function deleteSpecialty(request, response, next) {
-    db.oneOrNone("DELETE FROM Specialty WHERE id=${id} RETURNING id", request.params)
-        .then((data) => returnDataOr404(response, data))
-        .catch(next);
+  db.oneOrNone('DELETE FROM Specialty WHERE id=${id} RETURNING id', request.params)
+    .then((data) => returnDataOr404(response, data))
+    .catch(next);
 }
