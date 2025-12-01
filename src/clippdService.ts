@@ -316,9 +316,10 @@ function readClippers(
               r.rating, 
               r.comment as "reviewContent",
               r.createdAt as "date",
-              COALESCE(cl."firstName" || ' ' || cl."lastName", 'Anonymous') as "reviewerName"
+              COALESCE(u."firstName" || ' ' || u."lastName", 'Anonymous') as "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
+            LEFT JOIN UserAccount u ON cl.userID = u.id
             WHERE r.clipperID = $1
             ORDER BY r.createdAt DESC`,
             [clipper.id],
