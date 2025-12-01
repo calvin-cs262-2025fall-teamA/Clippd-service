@@ -192,7 +192,7 @@ function readUsers(_request, response, next) {
 }
 // ==================== CLIPPER CRUD ====================
 /**
- * Get all clippers with their details including portfolio images
+ * Get all clippers with their details including portfolio images and reviews
  */
 function readClippers(_request, response, next) {
   // First get all clippers with their basic info
@@ -215,22 +215,23 @@ function readClippers(_request, response, next) {
              WHERE p.clipperID = $1
              ORDER BY pic.addedAt`, [clipper.id]);
         // Fetch reviews with reviewer info
-        // const reviews = await db.manyOrNone(`SELECT 
-        //       r.id, 
-        //       r.clientID,
-        //       r.clipperID, 
-        //       r.rating, 
-        //       r.comment as "reviewContent",
-        //       r.createdAt as "date",
-        //       COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') as "reviewerName"
-        //     FROM Review r
-        //     LEFT JOIN Client cl ON r.clientID = cl.id
-        //     LEFT JOIN UserAccount u ON cl.userID = u.id
-        //     WHERE r.clipperID = $1
-        //     ORDER BY r.createdAt DESC`, [clipper.id]);
+        const reviews = await db.manyOrNone(`SELECT 
+              r.id, 
+              r.clientID,
+              r.clipperID, 
+              r.rating, 
+              r.comment as "reviewContent",
+              r.createdAt as "date",
+              COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') as "reviewerName"
+            FROM Review r
+            LEFT JOIN Client cl ON r.clientID = cl.id
+            LEFT JOIN UserAccount u ON cl.userID = u.id
+            WHERE r.clipperID = $1
+            ORDER BY r.createdAt DESC`, [clipper.id]);
         return {
           ...clipper,
           images: images.map((img) => img.image),
+          reviews,
         };
       }));
       response.send(clippersWithImages);
