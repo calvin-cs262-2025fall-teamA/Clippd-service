@@ -316,7 +316,7 @@ function readClippers(
               r.rating, 
               r.comment as "reviewContent",
               r.createdAt as "date",
-              COALESCE(u."firstName" || ' ' || u."lastName", 'Anonymous') as "reviewerName"
+              COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') AS "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
             LEFT JOIN UserAccount u ON cl.userID = u.id
@@ -328,7 +328,7 @@ function readClippers(
           return {
             ...clipper,
             images: images.map((img: { image: string }) => img.image),
-            reviews: reviews || [],
+            reviews,
           };
         }),
       );

@@ -192,7 +192,7 @@ function readUsers(_request, response, next) {
 }
 // ==================== CLIPPER CRUD ====================
 /**
- * Get all clippers with their details including portfolio images
+ * Get all clippers with their details including portfolio images and reviews
  */
 function readClippers(_request, response, next) {
   // First get all clippers with their basic info
@@ -223,7 +223,7 @@ function readClippers(_request, response, next) {
               r.rating, 
               r.comment as "reviewContent",
               r.createdAt as "date",
-              COALESCE(u."firstName" || ' ' || u."lastName", 'Anonymous') as "reviewerName"
+              COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') as "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
             LEFT JOIN UserAccount u ON cl.userID = u.id
