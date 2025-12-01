@@ -232,11 +232,7 @@ function readClippers(_request, response, next) {
         return {
           ...clipper,
           images: images.map((img) => img.image),
-<<<<<<< HEAD
-          reviews,
-=======
           reviews: reviews || [],
->>>>>>> 032250a06198d195946a1341a4a16a758a0dcbe3
         };
       }));
       response.send(clippersWithImagesAndReviews);
