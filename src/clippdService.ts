@@ -63,10 +63,28 @@ const port: number = parseInt(process.env.PORT as string) || 3000;
 const router = express.Router();
 
 app.use(cors());
+app.use(express.json());  // Move this to app level
 router.use(express.json());
 
 // Root endpoint
 router.get('/', readHello);
+
+// Test login endpoint
+router.post('/test-login', (req: Request, res: Response) => {
+  try {
+    console.log('[TestLogin] Received request');
+    res.status(200).json({
+      id: 999,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'Client',
+      emailAddress: 'test@example.com',
+    });
+  } catch (err) {
+    console.error('[TestLogin] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // Authentication routes
 router.post('/auth/signup', signup);
@@ -117,6 +135,18 @@ router.post('/clippers/:id/specialties', addSpecialty);
 router.delete('/specialties/:id', deleteSpecialty);
 
 app.use(router);
+
+// Error handling middleware
+app.use((error: Error, req: Request, res: Response) => {
+  console.error('[Error Handler] Error occurred:', error);
+  console.error('[Error Handler] Error message:', error.message);
+  console.error('[Error Handler] Error stack:', error.stack);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: error.message,
+    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+  });
+});
 
 app.listen(port, '0.0.0.0', (): void => {
   console.log(`Listening on port ${port} on all network interfaces`);
@@ -169,18 +199,40 @@ function signup(
 /**
  * Login user - validate credentials
  */
-function login(request: Request, response: Response, next: NextFunction): void {
-  const { loginID, password } = request.body;
-  db.oneOrNone(
-    'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${passWord}',
-    { loginID, password },
-  )
-    .then((data: Partial<UserAccount> | null): void => {
-      returnDataOr404(response, data);
-    })
-    .catch((error: Error): void => {
-      next(error);
-    });
+function login(request: Request, response: Response): void {
+  try {
+    const { loginID, passWord } = request.body;
+    
+    console.log('[Login] Request received with loginID:', loginID);
+    
+    if (!loginID || !passWord) {
+      console.log('[Login] Missing loginID or passWord');
+      response.status(400).json({ error: 'loginID and passWord required' });
+      return;
+    }
+
+    // Query database for user using template literal syntax
+    db.oneOrNone(
+      'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
+      { loginID, passWord },
+    )
+      .then((user: { id: number; firstName: string; lastName: string; role: string; emailAddress: string } | null) => {
+        if (user) {
+          console.log('[Login] Login successful for user:', loginID);
+          response.status(200).json(user);
+        } else {
+          console.log('[Login] Login failed - invalid credentials');
+          response.status(401).json({ error: 'Invalid credentials' });
+        }
+      })
+      .catch((error: Error) => {
+        console.error('[Login] Database error:', error.message);
+        response.status(500).json({ error: 'Database error', message: error.message });
+      });
+  } catch (error: Error) {
+    console.error('[Login] Unexpected error:', (error as Error).message);
+    response.status(500).json({ error: 'Server error', message: (error as Error).message });
+  }
 }
 
 // ==================== USER CRUD ====================

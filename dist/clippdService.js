@@ -41,9 +41,26 @@ const app = express();
 const port = parseInt(process.env.PORT) || 3000;
 const router = express.Router();
 app.use(cors());
+app.use(express.json()); // Move this to app level
 router.use(express.json());
 // Root endpoint
 router.get('/', readHello);
+// Test login endpoint
+router.post('/test-login', (req, res) => {
+  try {
+    console.log('[TestLogin] Received request');
+    res.status(200).json({
+      id: 999,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'Client',
+      emailAddress: 'test@example.com',
+    });
+  } catch (err) {
+    console.error('[TestLogin] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 // Authentication routes
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
@@ -84,6 +101,17 @@ router.get('/clippers/:id/specialties', readSpecialties);
 router.post('/clippers/:id/specialties', addSpecialty);
 router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
+// Error handling middleware
+app.use((error, req, res) => {
+  console.error('[Error Handler] Error occurred:', error);
+  console.error('[Error Handler] Error message:', error.message);
+  console.error('[Error Handler] Error stack:', error.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: error.message,
+    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+  });
+});
 app.listen(port, '0.0.0.0', () => {
   console.log(`Listening on port ${port} on all network interfaces`);
 });
@@ -122,15 +150,33 @@ function signup(request, response, next) {
 /**
  * Login user - validate credentials
  */
-function login(request, response, next) {
-  const { loginID, password } = request.body;
-  db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID=${loginID} AND passWord=${passWord}', { loginID, password })
-    .then((data) => {
-      returnDataOr404(response, data);
-    })
-    .catch((error) => {
-      next(error);
-    });
+function login(request, response) {
+  try {
+    const { loginID, passWord } = request.body;
+    console.log('[Login] Request received with loginID:', loginID);
+    if (!loginID || !passWord) {
+      console.log('[Login] Missing loginID or passWord');
+      return response.status(400).json({ error: 'loginID and passWord required' });
+    }
+    // Query database for user using template literal syntax
+    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
+      .then((user) => {
+        if (user) {
+          console.log('[Login] Login successful for user:', loginID);
+          response.status(200).json(user);
+        } else {
+          console.log('[Login] Login failed - invalid credentials');
+          response.status(401).json({ error: 'Invalid credentials' });
+        }
+      })
+      .catch((error) => {
+        console.error('[Login] Database error:', error.message);
+        response.status(500).json({ error: 'Database error', message: error.message });
+      });
+  } catch (error) {
+    console.error('[Login] Unexpected error:', error.message);
+    response.status(500).json({ error: 'Server error', message: error.message });
+  }
 }
 // ==================== USER CRUD ====================
 /**
@@ -192,7 +238,7 @@ function readUsers(_request, response, next) {
 }
 // ==================== CLIPPER CRUD ====================
 /**
- * Get all clippers with their details including portfolio images and reviews
+ * Get all clippers with their details including portfolio images
  */
 function readClippers(_request, response, next) {
   // First get all clippers with their basic info
@@ -223,7 +269,7 @@ function readClippers(_request, response, next) {
               r.rating, 
               r.comment as "reviewContent",
               r.createdAt as "date",
-              COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') as "reviewerName"
+              COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') AS "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
             LEFT JOIN UserAccount u ON cl.userID = u.id
@@ -232,7 +278,7 @@ function readClippers(_request, response, next) {
         return {
           ...clipper,
           images: images.map((img) => img.image),
-          reviews: reviews || [],
+          reviews,
         };
       }));
       response.send(clippersWithImagesAndReviews);
