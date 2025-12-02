@@ -27,14 +27,14 @@ import pgPromise from 'pg-promise';
 import 'dotenv/config';
 // Set up the database
 const db = pgPromise()({
-  host: process.env.DB_SERVER || '',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_DATABASE || '',
-  user: process.env.DB_USER || '',
-  password: process.env.DB_PASSWORD || '',
-  ssl: {
-    rejectUnauthorized: false,
-  },
+    host: process.env.DB_SERVER || '',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    database: process.env.DB_DATABASE || '',
+    user: process.env.DB_USER || '',
+    password: process.env.DB_PASSWORD || '',
+    ssl: {
+        rejectUnauthorized: false,
+    },
 });
 // Configure the server and its routes
 const app = express();
@@ -47,19 +47,20 @@ router.use(express.json());
 router.get('/', readHello);
 // Test login endpoint
 router.post('/test-login', (req, res) => {
-  try {
-    console.log('[TestLogin] Received request');
-    res.status(200).json({
-      id: 999,
-      firstName: 'Test',
-      lastName: 'User',
-      role: 'Client',
-      emailAddress: 'test@example.com',
-    });
-  } catch (err) {
-    console.error('[TestLogin] Error:', err);
-    res.status(500).json({ error: 'Server error' });
-  }
+    try {
+        console.log('[TestLogin] Received request');
+        res.status(200).json({
+            id: 999,
+            firstName: 'Test',
+            lastName: 'User',
+            role: 'Client',
+            emailAddress: 'test@example.com',
+        });
+    }
+    catch (err) {
+        console.error('[TestLogin] Error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 // Authentication routes
 router.post('/auth/signup', signup);
@@ -103,137 +104,140 @@ router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
 // Error handling middleware
 app.use((error, req, res) => {
-  console.error('[Error Handler] Error occurred:', error);
-  console.error('[Error Handler] Error message:', error.message);
-  console.error('[Error Handler] Error stack:', error.stack);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: error.message,
-    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
-  });
+    console.error('[Error Handler] Error occurred:', error);
+    console.error('[Error Handler] Error message:', error.message);
+    console.error('[Error Handler] Error stack:', error.stack);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: error.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+    });
 });
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Listening on port ${port} on all network interfaces`);
+    console.log(`Listening on port ${port} on all network interfaces`);
 });
 /**
  * Utility function to standardize response pattern for database queries.
  */
 function returnDataOr404(response, data) {
-  // Use explicit null/undefined check to satisfy ESLint eqeqeq rule.
-  if (data === null || data === undefined) {
-    response.sendStatus(404);
-    return;
-  }
-  response.send(data);
+    // Use explicit null/undefined check to satisfy ESLint eqeqeq rule.
+    if (data === null || data === undefined) {
+        response.sendStatus(404);
+        return;
+    }
+    response.send(data);
 }
 /**
  * Root endpoint - health check
  */
 function readHello(_request, response) {
-  response.send('Hello, Clippd service!');
+    response.send('Hello, Clippd service!');
 }
 // ==================== AUTHENTICATION ====================
 /**
  * Sign up a new user
  */
 function signup(request, response, next) {
-  db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
+    db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
      VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
      RETURNING id`, request.body)
-    .then((data) => {
-      response.send(data);
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Login user - validate credentials
  */
 function login(request, response) {
-  try {
-    const { loginID, passWord } = request.body;
-    console.log('[Login] Request received with loginID:', loginID);
-    if (!loginID || !passWord) {
-      console.log('[Login] Missing loginID or passWord');
-      return response.status(400).json({ error: 'loginID and passWord required' });
-    }
-    // Query database for user using template literal syntax
-    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
-      .then((user) => {
-        if (user) {
-          console.log('[Login] Login successful for user:', loginID);
-          response.status(200).json(user);
-        } else {
-          console.log('[Login] Login failed - invalid credentials');
-          response.status(401).json({ error: 'Invalid credentials' });
+    try {
+        const { loginID, passWord } = request.body;
+        console.log('[Login] Request received with loginID:', loginID);
+        if (!loginID || !passWord) {
+            console.log('[Login] Missing loginID or passWord');
+            response.status(400).json({ error: 'loginID and passWord required' });
+            return;
         }
-      })
-      .catch((error) => {
-        console.error('[Login] Database error:', error.message);
-        response.status(500).json({ error: 'Database error', message: error.message });
-      });
-  } catch (error) {
-    console.error('[Login] Unexpected error:', error.message);
-    response.status(500).json({ error: 'Server error', message: error.message });
-  }
+        // Query database for user using template literal syntax
+        db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
+            .then((user) => {
+            if (user) {
+                console.log('[Login] Login successful for user:', loginID);
+                response.status(200).json(user);
+            }
+            else {
+                console.log('[Login] Login failed - invalid credentials');
+                response.status(401).json({ error: 'Invalid credentials' });
+            }
+        })
+            .catch((error) => {
+            console.error('[Login] Database error:', error.message);
+            response.status(500).json({ error: 'Database error', message: error.message });
+        });
+    }
+    catch (error) {
+        console.error('[Login] Unexpected error:', error.message);
+        response.status(500).json({ error: 'Server error', message: error.message });
+    }
 }
 // ==================== USER CRUD ====================
 /**
  * Get user by ID
  */
 function readUser(request, response, next) {
-  db.oneOrNone('SELECT * FROM UserAccount WHERE id=${id}', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('SELECT * FROM UserAccount WHERE id=${id}', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Update user information
  */
 function updateUser(request, response, next) {
-  db.oneOrNone(`UPDATE UserAccount 
+    db.oneOrNone(`UPDATE UserAccount 
      SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
          emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
          bio=\${body.bio}, profileImage=\${body.profileImage},
          city=\${body.city}, state=\${body.state}
      WHERE id=\${params.id} 
      RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
+        params: request.params,
+        body: request.body,
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        returnDataOr404(response, data);
+    })
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Delete user account
  */
 function deleteUser(request, response, next) {
-  db.oneOrNone('DELETE FROM UserAccount WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('DELETE FROM UserAccount WHERE id=${id} RETURNING id', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Get all users (without sensitive fields)
  */
 function readUsers(_request, response, next) {
-  db.manyOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount')
-    .then((data) => {
-      response.send(data);
+    db.manyOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount')
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== CLIPPER CRUD ====================
@@ -241,8 +245,8 @@ function readUsers(_request, response, next) {
  * Get all clippers with their details including portfolio images
  */
 function readClippers(_request, response, next) {
-  // First get all clippers with their basic info
-  db.manyOrNone(`SELECT 
+    // First get all clippers with their basic info
+    db.manyOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
@@ -252,17 +256,17 @@ function readClippers(_request, response, next) {
     LEFT JOIN Portfolio p ON c.id = p.clipperID
     LEFT JOIN Review r ON c.id = r.clipperID
     GROUP BY c.id, u.id, p.id`)
-    .then(async (clippers) => {
-      // For each clipper, fetch their portfolio images and reviews
-      const clippersWithImagesAndReviews = await Promise.all(clippers.map(async (clipper) => {
-        // Fetch images
-        const images = await db.manyOrNone(`SELECT pic.image 
+        .then(async (clippers) => {
+        // For each clipper, fetch their portfolio images and reviews
+        const clippersWithImagesAndReviews = await Promise.all(clippers.map(async (clipper) => {
+            // Fetch images
+            const images = await db.manyOrNone(`SELECT pic.image 
              FROM Pictures pic
              JOIN Portfolio p ON pic.portfolioID = p.id
              WHERE p.clipperID = $1
              ORDER BY pic.addedAt`, [clipper.id]);
-        // Fetch reviews with reviewer info
-        const reviews = await db.manyOrNone(`SELECT 
+            // Fetch reviews with reviewer info
+            const reviews = await db.manyOrNone(`SELECT 
               r.id, 
               r.clientID,
               r.clipperID, 
@@ -275,23 +279,23 @@ function readClippers(_request, response, next) {
             LEFT JOIN UserAccount u ON cl.userID = u.id
             WHERE r.clipperID = $1
             ORDER BY r.createdAt DESC`, [clipper.id]);
-        return {
-          ...clipper,
-          images: images.map((img) => img.image),
-          reviews,
-        };
-      }));
-      response.send(clippersWithImagesAndReviews);
+            return {
+                ...clipper,
+                images: images.map((img) => img.image),
+                reviews,
+            };
+        }));
+        response.send(clippersWithImagesAndReviews);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Get single clipper with details
  */
 function readClipper(request, response, next) {
-  db.oneOrNone(`SELECT 
+    db.oneOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
@@ -302,56 +306,56 @@ function readClipper(request, response, next) {
     LEFT JOIN Review r ON c.id = r.clipperID
     WHERE c.id=\${id}
     GROUP BY c.id, u.id, p.id`, request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Create clipper profile (assumes user already exists)
  */
 function createClipper(request, response, next) {
-  const { userID } = request.body;
-  db.one('INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id', {
-    userID,
-  })
-    .then((data) => {
-      response.send(data);
+    const { userID } = request.body;
+    db.one('INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id', {
+        userID,
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        response.send(data);
+    })
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Update clipper (updates associated user account)
  */
 function updateClipper(request, response, next) {
-  db.oneOrNone(`UPDATE UserAccount 
+    db.oneOrNone(`UPDATE UserAccount 
      SET bio=\${body.bio}, profileImage=\${body.profileImage}
      WHERE id=(SELECT userID FROM Clipper WHERE id=\${params.id})
      RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
+        params: request.params,
+        body: request.body,
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        returnDataOr404(response, data);
+    })
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Delete clipper profile
  */
 function deleteClipper(request, response, next) {
-  db.oneOrNone('DELETE FROM Clipper WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('DELETE FROM Clipper WHERE id=${id} RETURNING id', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== PORTFOLIO ====================
@@ -359,49 +363,49 @@ function deleteClipper(request, response, next) {
  * Get clipper's portfolio
  */
 function readPortfolio(request, response, next) {
-  db.oneOrNone('SELECT * FROM Portfolio WHERE clipperID=${id}', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('SELECT * FROM Portfolio WHERE clipperID=${id}', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Create portfolio for clipper
  */
 function createPortfolio(request, response, next) {
-  const portfolioData = {
-    ...request.body,
-    clipperID: request.params.id,
-  };
-  db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
+    const portfolioData = {
+        ...request.body,
+        clipperID: request.params.id,
+    };
+    db.one(`INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
      VALUES (\${clipperID}, \${shopName}, \${shopAddress}, \${city}, \${state}, \${latitude}, \${longitude}, \${description})
      RETURNING id`, portfolioData)
-    .then((data) => {
-      response.send(data);
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Update portfolio
  */
 function updatePortfolio(request, response, next) {
-  db.oneOrNone(`UPDATE Portfolio 
+    db.oneOrNone(`UPDATE Portfolio 
      SET shopName=\${body.shopName}, shopAddress=\${body.shopAddress},
         city=\${body.city}, state=\${body.state}, latitude=\${body.latitude}, longitude=\${body.longitude}, description=\${body.description}
      WHERE id=\${params.id}
      RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
+        params: request.params,
+        body: request.body,
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        returnDataOr404(response, data);
+    })
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== PICTURES ====================
@@ -409,37 +413,37 @@ function updatePortfolio(request, response, next) {
  * Get all pictures for a portfolio
  */
 function readPictures(request, response, next) {
-  db.manyOrNone('SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC', request.params)
-    .then((data) => {
-      response.send(data);
+    db.manyOrNone('SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC', request.params)
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Add picture to portfolio
  */
 function addPicture(request, response, next) {
-  const { image } = request.body;
-  db.one('INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id', { id: request.params.id, image })
-    .then((data) => {
-      response.send(data);
+    const { image } = request.body;
+    db.one('INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id', { id: request.params.id, image })
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Delete picture
  */
 function deletePicture(request, response, next) {
-  db.oneOrNone('DELETE FROM Pictures WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('DELETE FROM Pictures WHERE id=${id} RETURNING id', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== SERVICES ====================
@@ -447,58 +451,58 @@ function deletePicture(request, response, next) {
  * Get all services for a clipper
  */
 function readServices(request, response, next) {
-  db.manyOrNone('SELECT * FROM Service WHERE clipperID=${id}', request.params)
-    .then((data) => {
-      response.send(data);
+    db.manyOrNone('SELECT * FROM Service WHERE clipperID=${id}', request.params)
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Add service for clipper
  */
 function addService(request, response, next) {
-  const serviceData = {
-    clipperID: request.params.id,
-    ...request.body,
-  };
-  db.one('INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id', serviceData)
-    .then((data) => {
-      response.send(data);
+    const serviceData = {
+        clipperID: request.params.id,
+        ...request.body,
+    };
+    db.one('INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id', serviceData)
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Update service
  */
 function updateService(request, response, next) {
-  db.oneOrNone(`UPDATE Service 
+    db.oneOrNone(`UPDATE Service 
      SET serviceName=\${body.serviceName}, price=\${body.price}, durationMinutes=\${body.durationMinutes}
      WHERE id=\${params.id}
      RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
+        params: request.params,
+        body: request.body,
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        returnDataOr404(response, data);
+    })
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Delete service
  */
 function deleteService(request, response, next) {
-  db.oneOrNone('DELETE FROM Service WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('DELETE FROM Service WHERE id=${id} RETURNING id', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== REVIEWS ====================
@@ -506,48 +510,86 @@ function deleteService(request, response, next) {
  * Get all reviews for a clipper
  */
 function readReviews(request, response, next) {
-  db.manyOrNone(`SELECT 
-      r.id, r.rating, r.comment, r.createdAt,
-      u.firstName || ' ' || u.lastName as reviewerName,
-      u.city as reviewerCity
-    FROM Review r
-    JOIN Client c ON r.clientID = c.id
-    JOIN UserAccount u ON c.userID = u.id
-    WHERE r.clipperID=\${id}
-    ORDER BY r.createdAt DESC`, request.params)
-    .then((data) => {
-      response.send(data);
+    db.manyOrNone(`SELECT 
+      r.id, r.rating, r.comment, r.clientid, r.createdat,
+      u.firstname || ' ' || u.lastname as "reviewerName",
+      u.city as "reviewerCity"
+    FROM review r
+    JOIN client c ON r.clientid = c.id
+    JOIN useraccount u ON c.userid = u.id
+    WHERE r.clipperid=$1
+    ORDER BY r.id DESC`, [parseInt(request.params.id)])
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        console.error('[readReviews] Database error:', error.message);
+        next(error);
     });
 }
 /**
  * Add review for clipper
  */
 function addReview(request, response, next) {
-  const reviewData = {
-    clipperID: request.params.id,
-    ...request.body,
-  };
-  db.one('INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (${clientID}, ${clipperID}, ${rating}, ${comment}) RETURNING id', reviewData)
-    .then((data) => {
-      response.send(data);
+    const { clientID, clipperID, rating, comment } = request.body;
+    // First, ensure the sequence is set correctly
+    db.oneOrNone("SELECT setval(pg_get_serial_sequence('review', 'id'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)")
+        .then(() => {
+        // Now insert the review
+        return db.one('INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id', [clientID, clipperID, rating, comment]);
     })
-    .catch((error) => {
-      next(error);
+        .then((data) => {
+        // Calculate average rating for this clipper
+        return db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID])
+            .then((ratingData) => {
+            response.status(201).json({
+                id: data.id,
+                averageRating: ratingData.averageRating
+            });
+        });
+    })
+        .catch((error) => {
+        console.error('[addReview] Database error:', error.message);
+        console.error('[addReview] Full error:', error);
+        next(error);
     });
 }
+/**
+ * Update review (rating and comment)
+ */
 /**
  * Delete review
  */
 function deleteReview(request, response, next) {
-  db.oneOrNone('DELETE FROM Review WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    const { id } = request.params;
+    // First, get the clipperID before deleting
+    db.oneOrNone('SELECT clipperid FROM review WHERE id=$1', [parseInt(id)])
+        .then((reviewData) => {
+        if (!reviewData) {
+            response.status(404).json({ error: 'Review not found' });
+            return null;
+        }
+        const clipperID = reviewData.clipperid;
+        // Delete the review
+        return db.oneOrNone('DELETE FROM Review WHERE id=$1 RETURNING id', [parseInt(id)])
+            .then((data) => {
+            if (!data) {
+                response.status(404).json({ error: 'Review not found' });
+                return null;
+            }
+            // Calculate average rating for this clipper
+            return db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID])
+                .then((ratingData) => {
+                response.status(200).json({
+                    id: data.id,
+                    averageRating: ratingData.averageRating || 0
+                });
+            });
+        });
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        console.error('[deleteReview] Database error:', error.message);
+        next(error);
     });
 }
 // ==================== FAVORITES ====================
@@ -555,7 +597,7 @@ function deleteReview(request, response, next) {
  * Get all favorite clippers for a client
  */
 function readFavorites(request, response, next) {
-  db.manyOrNone(`SELECT 
+    db.manyOrNone(`SELECT 
       c.id, c.userid,
       u.firstName, u.lastName, u.city, u.state, u.profileImage,
       p.shopName,
@@ -569,35 +611,35 @@ function readFavorites(request, response, next) {
     WHERE fc.clientID=\${id}
     GROUP BY c.id, u.id, p.id
     ORDER BY fc.favoritedAt DESC`, request.params)
-    .then((data) => {
-      response.send(data);
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Add clipper to favorites
  */
 function addFavorite(request, response, next) {
-  db.one('INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID', request.params)
-    .then((data) => {
-      response.send(data);
+    db.one('INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID', request.params)
+        .then((data) => {
+        response.send(data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 /**
  * Remove clipper from favorites
  */
 function removeFavorite(request, response, next) {
-  db.oneOrNone('DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+    db.oneOrNone('DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID', request.params)
+        .then((data) => {
+        returnDataOr404(response, data);
     })
-    .catch((error) => {
-      next(error);
+        .catch((error) => {
+        next(error);
     });
 }
 // ==================== SPECIALTIES ====================
@@ -605,27 +647,27 @@ function removeFavorite(request, response, next) {
  * Get all specialties for a clipper
  */
 function readSpecialties(request, response, next) {
-  db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
-    .then((data) => response.send(data))
-    .catch(next);
+    db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
+        .then((data) => response.send(data))
+        .catch(next);
 }
 /*
  * Add specialty for a clipper
  */
 function addSpecialty(request, response, next) {
-  const data = {
-    clipperID: request.params.id,
-    hairType: request.body.hairType,
-  };
-  db.one('INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id', data)
-    .then((data) => response.send(data))
-    .catch(next);
+    const data = {
+        clipperID: request.params.id,
+        hairType: request.body.hairType,
+    };
+    db.one('INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id', data)
+        .then((data) => response.send(data))
+        .catch(next);
 }
 /*
  * Delete specialty
  */
 function deleteSpecialty(request, response, next) {
-  db.oneOrNone('DELETE FROM Specialty WHERE id=${id} RETURNING id', request.params)
-    .then((data) => returnDataOr404(response, data))
-    .catch(next);
+    db.oneOrNone('DELETE FROM Specialty WHERE id=${id} RETURNING id', request.params)
+        .then((data) => returnDataOr404(response, data))
+        .catch(next);
 }
