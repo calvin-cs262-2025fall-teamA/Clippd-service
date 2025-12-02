@@ -78,7 +78,7 @@ router.post('/test-login', (req: Request, res: Response) => {
       firstName: 'Test',
       lastName: 'User',
       role: 'Client',
-      emailAddress: 'test@example.com'
+      emailAddress: 'test@example.com',
     });
   } catch (err) {
     console.error('[TestLogin] Error:', err);
@@ -137,14 +137,14 @@ router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
 
 // Error handling middleware
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
+app.use((error: Error, req: Request, res: Response) => {
   console.error('[Error Handler] Error occurred:', error);
   console.error('[Error Handler] Error message:', error.message);
   console.error('[Error Handler] Error stack:', error.stack);
   res.status(500).json({ 
     error: 'Internal Server Error',
     message: error.message,
-    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
   });
 });
 
@@ -199,7 +199,7 @@ function signup(
 /**
  * Login user - validate credentials
  */
-function login(request: Request, response: Response, next: NextFunction): void {
+function login(request: Request, response: Response): void {
   try {
     const { loginID, passWord } = request.body;
     
@@ -214,9 +214,9 @@ function login(request: Request, response: Response, next: NextFunction): void {
     // Query database for user using template literal syntax
     db.oneOrNone(
       'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
-      { loginID, passWord }
+      { loginID, passWord },
     )
-      .then((user: any) => {
+      .then((user: { id: number; firstName: string; lastName: string; role: string; emailAddress: string } | null) => {
         if (user) {
           console.log('[Login] Login successful for user:', loginID);
           response.status(200).json(user);
@@ -229,9 +229,9 @@ function login(request: Request, response: Response, next: NextFunction): void {
         console.error('[Login] Database error:', error.message);
         response.status(500).json({ error: 'Database error', message: error.message });
       });
-  } catch (error: any) {
-    console.error('[Login] Unexpected error:', error.message);
-    response.status(500).json({ error: 'Server error', message: error.message });
+  } catch (error: Error) {
+    console.error('[Login] Unexpected error:', (error as Error).message);
+    response.status(500).json({ error: 'Server error', message: (error as Error).message });
   }
 }
 
