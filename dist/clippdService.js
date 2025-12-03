@@ -156,7 +156,8 @@ function login(request, response) {
     console.log('[Login] Request received with loginID:', loginID);
     if (!loginID || !passWord) {
       console.log('[Login] Missing loginID or passWord');
-      return response.status(400).json({ error: 'loginID and passWord required' });
+      response.status(400).json({ error: 'loginID and passWord required' });
+      return;
     }
     // Query database for user using template literal syntax
     db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
@@ -507,18 +508,19 @@ function deleteService(request, response, next) {
  */
 function readReviews(request, response, next) {
   db.manyOrNone(`SELECT 
-      r.id, r.rating, r.comment, r.createdAt,
-      u.firstName || ' ' || u.lastName as reviewerName,
-      u.city as reviewerCity
-    FROM Review r
-    JOIN Client c ON r.clientID = c.id
-    JOIN UserAccount u ON c.userID = u.id
-    WHERE r.clipperID=\${id}
-    ORDER BY r.createdAt DESC`, request.params)
+      r.id, r.rating, r.comment, r.clientid, r.createdat,
+      u.firstname || ' ' || u.lastname as "reviewerName",
+      u.city as "reviewerCity"
+    FROM review r
+    JOIN client c ON r.clientid = c.id
+    JOIN useraccount u ON c.userid = u.id
+    WHERE r.clipperid=$1
+    ORDER BY r.id DESC`, [parseInt(request.params.id)])
     .then((data) => {
       response.send(data);
     })
     .catch((error) => {
+      console.error('[readReviews] Database error:', error.message);
       next(error);
     });
 }
@@ -526,27 +528,58 @@ function readReviews(request, response, next) {
  * Add review for clipper
  */
 function addReview(request, response, next) {
-  const reviewData = {
-    clipperID: request.params.id,
-    ...request.body,
-  };
-  db.one('INSERT INTO Review(clientID, clipperID, rating, comment) VALUES (${clientID}, ${clipperID}, ${rating}, ${comment}) RETURNING id', reviewData)
-    .then((data) => {
-      response.send(data);
+  const { clientID, clipperID, rating, comment } = request.body;
+  // First, ensure the sequence is set correctly
+  db.oneOrNone('SELECT setval(pg_get_serial_sequence(\'review\', \'id\'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)')
+    .then(() => {
+      // Now insert the review
+      return db.one('INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id', [clientID, clipperID, rating, comment]);
+    })
+    .then(async (data) => {
+      // Calculate average rating for this clipper
+      const ratingData = await db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID]);
+      response.status(201).json({
+        id: data.id,
+        averageRating: ratingData.averageRating,
+      });
     })
     .catch((error) => {
+      console.error('[addReview] Database error:', error.message);
+      console.error('[addReview] Full error:', error);
       next(error);
     });
 }
 /**
+ * Update review (rating and comment)
+ */
+/**
  * Delete review
  */
 function deleteReview(request, response, next) {
-  db.oneOrNone('DELETE FROM Review WHERE id=${id} RETURNING id', request.params)
-    .then((data) => {
-      returnDataOr404(response, data);
+  const { id } = request.params;
+  // First, get the clipperID before deleting
+  db.oneOrNone('SELECT clipperid FROM review WHERE id=$1', [parseInt(id)])
+    .then(async (reviewData) => {
+      if (!reviewData) {
+        response.status(404).json({ error: 'Review not found' });
+        return;
+      }
+      const clipperID = reviewData.clipperid;
+      // Delete the review
+      const data = await db.oneOrNone('DELETE FROM Review WHERE id=$1 RETURNING id', [parseInt(id)]);
+      if (!data) {
+        response.status(404).json({ error: 'Review not found' });
+        return;
+      }
+      // Calculate average rating for this clipper
+      const ratingData = await db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID]);
+      response.status(200).json({
+        id: data.id,
+        averageRating: ratingData.averageRating || 0,
+      });
     })
     .catch((error) => {
+      console.error('[deleteReview] Database error:', error.message);
       next(error);
     });
 }
