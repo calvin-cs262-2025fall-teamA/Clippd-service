@@ -533,19 +533,17 @@ function readReviews(request, response, next) {
 function addReview(request, response, next) {
     const { clientID, clipperID, rating, comment } = request.body;
     // First, ensure the sequence is set correctly
-    db.oneOrNone("SELECT setval(pg_get_serial_sequence('review', 'id'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)")
+    db.oneOrNone('SELECT setval(pg_get_serial_sequence(\'review\', \'id\'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)')
         .then(() => {
         // Now insert the review
         return db.one('INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id', [clientID, clipperID, rating, comment]);
     })
-        .then((data) => {
+        .then(async (data) => {
         // Calculate average rating for this clipper
-        return db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID])
-            .then((ratingData) => {
-            response.status(201).json({
-                id: data.id,
-                averageRating: ratingData.averageRating
-            });
+        const ratingData = await db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID]);
+        response.status(201).json({
+            id: data.id,
+            averageRating: ratingData.averageRating,
         });
     })
         .catch((error) => {
@@ -564,27 +562,23 @@ function deleteReview(request, response, next) {
     const { id } = request.params;
     // First, get the clipperID before deleting
     db.oneOrNone('SELECT clipperid FROM review WHERE id=$1', [parseInt(id)])
-        .then((reviewData) => {
+        .then(async (reviewData) => {
         if (!reviewData) {
             response.status(404).json({ error: 'Review not found' });
-            return null;
+            return;
         }
         const clipperID = reviewData.clipperid;
         // Delete the review
-        return db.oneOrNone('DELETE FROM Review WHERE id=$1 RETURNING id', [parseInt(id)])
-            .then((data) => {
-            if (!data) {
-                response.status(404).json({ error: 'Review not found' });
-                return null;
-            }
-            // Calculate average rating for this clipper
-            return db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID])
-                .then((ratingData) => {
-                response.status(200).json({
-                    id: data.id,
-                    averageRating: ratingData.averageRating || 0
-                });
-            });
+        const data = await db.oneOrNone('DELETE FROM Review WHERE id=$1 RETURNING id', [parseInt(id)]);
+        if (!data) {
+            response.status(404).json({ error: 'Review not found' });
+            return;
+        }
+        // Calculate average rating for this clipper
+        const ratingData = await db.one('SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1', [clipperID]);
+        response.status(200).json({
+            id: data.id,
+            averageRating: ratingData.averageRating || 0,
         });
     })
         .catch((error) => {
