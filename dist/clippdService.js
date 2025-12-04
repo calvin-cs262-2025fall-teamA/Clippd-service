@@ -200,7 +200,7 @@ function readUser(request, response, next) {
  */
 function updateUser(request, response, next) {
     const userId = request.params.id;
-    const { firstName, lastName, bio, profileImage, city, state, address, phone, emailAddress, } = request.body;
+    const { firstName, lastName, bio, profileImage, images, city, state, address, phone, emailAddress, } = request.body;
     // Build the update query using pg-promise parameterized syntax
     try {
         const updateFields = {};
@@ -213,6 +213,8 @@ function updateUser(request, response, next) {
             updateFields.bio = bio || null;
         if (profileImage !== undefined)
             updateFields.profileImage = profileImage || null;
+        if (images !== undefined)
+            updateFields.images = images && images.length > 0 ? images : null;
         if (city !== undefined)
             updateFields.city = city || null;
         if (state !== undefined)

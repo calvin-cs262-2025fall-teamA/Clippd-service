@@ -267,6 +267,7 @@ function updateUser(
     lastName,
     bio,
     profileImage,
+    images,
     city,
     state,
     address,
@@ -283,6 +284,7 @@ function updateUser(
     if (lastName !== undefined) updateFields.lastName = lastName || null;
     if (bio !== undefined) updateFields.bio = bio || null;
     if (profileImage !== undefined) updateFields.profileImage = profileImage || null;
+    if (images !== undefined) updateFields.images = images && images.length > 0 ? images : null;
     if (city !== undefined) updateFields.city = city || null;
     if (state !== undefined) updateFields.state = state || null;
     if (address !== undefined) updateFields.address = address || null;
