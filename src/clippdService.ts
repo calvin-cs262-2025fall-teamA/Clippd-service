@@ -261,25 +261,66 @@ function updateUser(
   response: Response,
   next: NextFunction,
 ): void {
-  db.oneOrNone(
-    `UPDATE UserAccount 
-     SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
-         emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
-         bio=\${body.bio}, profileImage=\${body.profileImage},
-         city=\${body.city}, state=\${body.state}
-     WHERE id=\${params.id} 
-     RETURNING id`,
-    {
-      params: request.params,
-      body: request.body as Partial<UserAccountInput>,
-    },
-  )
-    .then((data: { id: number } | null): void => {
-      returnDataOr404(response, data);
-    })
-    .catch((error: Error): void => {
-      next(error);
+  const userId = request.params.id;
+  const {
+    firstName,
+    lastName,
+    bio,
+    profileImage,
+    city,
+    state,
+    address,
+    phone,
+    emailAddress,
+  } = request.body;
+
+  // Build the update query using pg-promise parameterized syntax
+  try {
+    const updateFields: { [key: string]: unknown } = {};
+    
+    // Convert empty strings to NULL for optional fields
+    if (firstName !== undefined) updateFields.firstName = firstName || null;
+    if (lastName !== undefined) updateFields.lastName = lastName || null;
+    if (bio !== undefined) updateFields.bio = bio || null;
+    if (profileImage !== undefined) updateFields.profileImage = profileImage || null;
+    if (city !== undefined) updateFields.city = city || null;
+    if (state !== undefined) updateFields.state = state || null;
+    if (address !== undefined) updateFields.address = address || null;
+    if (phone !== undefined) updateFields.phone = phone || null;
+    if (emailAddress !== undefined) updateFields.emailAddress = emailAddress || null;
+
+    if (Object.keys(updateFields).length === 0) {
+      response.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+
+    // Build SET clause manually
+    const setClauses: string[] = [];
+    const params: { [key: string]: unknown } = { userId };
+
+    Object.entries(updateFields).forEach(([key, value], index) => {
+      const paramName = `val${index}`;
+      setClauses.push(`${key}=$\{${paramName}\}`);
+      params[paramName] = value;
     });
+
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$\{userId\}
+      RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
+    `;
+
+    db.oneOrNone(query, params)
+      .then((data: { id: number } | null): void => {
+        returnDataOr404(response, data);
+      })
+      .catch((error: Error): void => {
+        next(error);
+      });
+  } catch (error) {
+    next(error as Error);
+  }
 }
 
 /**
