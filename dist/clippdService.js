@@ -64,6 +64,7 @@ router.post('/test-login', (req, res) => {
 // Authentication routes
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
+router.put('/auth/user/profile', updateUserProfile);
 // User routes
 router.get('/users', readUsers);
 router.get('/users/:id', readUser);
@@ -160,7 +161,7 @@ function login(request, response) {
       return;
     }
     // Query database for user using template literal syntax
-    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
+    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
       .then((user) => {
         if (user) {
           console.log('[Login] Login successful for user:', loginID);
@@ -177,6 +178,82 @@ function login(request, response) {
   } catch (error) {
     console.error('[Login] Unexpected error:', error.message);
     response.status(500).json({ error: 'Server error', message: error.message });
+  }
+}
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ */
+function updateUserProfile(request, response, next) {
+  try {
+    // Extract user ID from request (assuming it's in cookies or session)
+    // For now, we'll get it from request.body since the client sends it
+    const userId = request.body.userId;
+    const { firstName, lastName, city, state, profileImage } = request.body;
+    if (!userId) {
+      response.status(400).json({ error: 'User ID is required' });
+      return;
+    }
+    console.log('[updateUserProfile] Received request with:', {
+      userId,
+      firstName,
+      lastName,
+      city,
+      state,
+      profileImage: profileImage ? 'image provided' : 'no image',
+    });
+    const updateFields = {};
+    if (firstName !== undefined) {
+      updateFields.firstName = firstName;
+    }
+    if (lastName !== undefined) {
+      updateFields.lastName = lastName;
+    }
+    if (city !== undefined) {
+      updateFields.city = city;
+    }
+    if (state !== undefined) {
+      updateFields.state = state;
+    }
+    if (profileImage !== undefined) {
+      updateFields.profileImage = profileImage;
+    }
+    if (Object.keys(updateFields).length === 0) {
+      response.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+    const setClauses = [];
+    const params = { userId };
+    Object.entries(updateFields).forEach(([key, value], index) => {
+      const paramName = `val${index}`;
+      setClauses.push(`${key}=$` + `{${paramName}}`);
+      params[paramName] = value;
+    });
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$` + `{userId}
+      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage
+    `;
+    console.log('[updateUserProfile] Executing query:', query);
+    console.log('[updateUserProfile] With params:', params);
+    db.oneOrNone(query, params)
+      .then((data) => {
+        if (data) {
+          console.log('[updateUserProfile] Update successful, returned data:', data);
+          response.status(200).json(data);
+        } else {
+          console.log('[updateUserProfile] User not found with ID:', userId);
+          response.status(404).json({ error: 'User not found' });
+        }
+      })
+      .catch((error) => {
+        console.error('[updateUserProfile] Database error:', error.message);
+        next(error);
+      });
+  } catch (error) {
+    console.error('[updateUserProfile] Error:', error.message);
+    next(error);
   }
 }
 // ==================== USER CRUD ====================
@@ -196,22 +273,71 @@ function readUser(request, response, next) {
  * Update user information
  */
 function updateUser(request, response, next) {
-  db.oneOrNone(`UPDATE UserAccount 
-     SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
-         emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
-         bio=\${body.bio}, profileImage=\${body.profileImage},
-         city=\${body.city}, state=\${body.state}
-     WHERE id=\${params.id} 
-     RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
-    })
-    .catch((error) => {
-      next(error);
+  const userId = request.params.id;
+  const { firstName, lastName, bio, profileImage, images, city, state, address, phone, emailAddress } = request.body;
+  // Build the update query using pg-promise parameterized syntax
+  try {
+    const updateFields = {};
+    // Convert empty strings to NULL for optional fields
+    if (firstName !== undefined) {
+      updateFields.firstName = firstName || null;
+    }
+    if (lastName !== undefined) {
+      updateFields.lastName = lastName || null;
+    }
+    if (bio !== undefined) {
+      updateFields.bio = bio || null;
+    }
+    if (profileImage !== undefined) {
+      updateFields.profileImage = profileImage || null;
+    }
+    if (images !== undefined) {
+      updateFields.images = images && images.length > 0 ? images : null;
+    }
+    if (city !== undefined) {
+      updateFields.city = city || null;
+    }
+    if (state !== undefined) {
+      updateFields.state = state || null;
+    }
+    if (address !== undefined) {
+      updateFields.address = address || null;
+    }
+    if (phone !== undefined) {
+      updateFields.phone = phone || null;
+    }
+    if (emailAddress !== undefined) {
+      updateFields.emailAddress = emailAddress || null;
+    }
+    if (Object.keys(updateFields).length === 0) {
+      response.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+    // Build SET clause manually
+    const setClauses = [];
+    const params = { userId };
+    Object.entries(updateFields).forEach(([key, value], index) => {
+      const paramName = `val${index}`;
+      // Avoid template string interpolation for pg-promise placeholder
+      setClauses.push(`${key}=$` + `{${paramName}}`);
+      params[paramName] = value;
     });
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$` + `{userId}
+      RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
+    `;
+    db.oneOrNone(query, params)
+      .then((data) => {
+        returnDataOr404(response, data);
+      })
+      .catch((error) => {
+        next(error);
+      });
+  } catch (error) {
+    next(error);
+  }
 }
 /**
  * Delete user account
