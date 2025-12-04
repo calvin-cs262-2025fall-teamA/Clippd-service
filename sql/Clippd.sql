@@ -125,13 +125,19 @@ GRANT SELECT ON Review TO PUBLIC;
 
 -- Sample data
 INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, latitude, longitude, createdAt)
-VALUES (1, 'Alice', 'Meijer', 'alice123', 'passAlice!', 'Client', 'Ali', '123 Pine St', 'Grand Rapids', 'MI', 'alice@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/alice.jpg', 42.963795, -85.670006, '2025-09-27 08:00:00');
+VALUES (1, 'Alice', 'Meijer', 'client', 'clientpw', 'Client', 'Alice', '123 Pine St', 'Grand Rapids', 'MI', 'alice@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/alice.jpg', 42.963795, -85.670006, '2025-09-27 08:00:00');
 
 INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, latitude, longitude, createdAt)
-VALUES (2, 'Ben', 'Nelson', 'bennel', 'passBen!', 'Clipper', 'BennyFade', '45 Barber Ln', 'Grand Rapids', 'MI', 'ben@example.com', '616-222-2222', 'Professional barber with 5 years of experience.', 'https://example.com/ben.jpg', NULL, NULL, '2025-09-29 15:00:00');
+VALUES (7, 'Tom', 'Cat', 'client2', 'clientpw2', 'Client', 'Tom', '123 Pine St', 'Grand Rapids', 'MI', 'tom@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/tom.jpg', 42.963795, -85.670006, '2025-09-27 08:00:00');
 
 INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, latitude, longitude, createdAt)
-VALUES (3, 'Chris', 'Evans', 'chrisevans', 'passChris!', 'Clipper', 'CPStyles', '99 Main Ave', 'Grand Rapids', 'MI', 'chris@example.com', '616-333-3333', 'Specializes in fades and beard trims.', 'https://example.com/chris.jpg', NULL, NULL, '2025-09-30 11:00:00');
+VALUES (8, 'Max', 'Verstappen', 'client3', 'clientpw3', 'Client', 'Max', '123 Pine St', 'Grand Rapids', 'MI', 'max@example.com', '616-111-1111', 'Loves stylish short cuts.', 'https://example.com/max.jpg', 42.963795, -85.670006, '2025-09-27 08:00:00');
+
+INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, latitude, longitude, createdAt)
+VALUES (2, 'Ben', 'Nelson', 'clipper', 'clipperpw', 'Clipper', 'BennyFade', '45 Barber Ln', 'Grand Rapids', 'MI', 'ben@example.com', '616-222-2222', 'Professional barber with 5 years of experience.', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop', NULL, NULL, '2025-09-29 15:00:00');
+
+INSERT INTO UserAccount (ID, firstName, lastName, loginID, passWord, role, nickname, address, city, state, emailAddress, phone, bio, profileImage, latitude, longitude, createdAt)
+VALUES (3, 'Chris', 'Evans', 'chrisevans', 'passChris!', 'Clipper', 'CPStyles', '99 Main Ave', 'Grand Rapids', 'MI', 'chris@example.com', '616-333-3333', 'Specializes in fades and beard trims.', 'https://image.tmdb.org/t/p/w500/3bOGNsHlrswhyW79uvIHH1V43JI.jpg', NULL, NULL, '2025-09-30 11:00:00');
 
 INSERT INTO Languages (userID, language) VALUES (1, 'English');
 INSERT INTO Languages (userID, language) VALUES (2, 'English');
@@ -152,14 +158,26 @@ VALUES (1, 1, 'Ben''s Barber Studio', '45 Barber Ln', 'Grand Rapids', 'MI', 42.9
 INSERT INTO Portfolio (ID, clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
 VALUES (2, 2, 'Chris Cuts', '99 Main Ave', 'Grand Rapids', 'MI', 42.964800, -85.668900, 'Classic styles with a modern twist.');
 
-INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (1, 1, 'https://example.com/ben_portfolio1.jpg', '2025-10-02 08:00:00');
-INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (2, 1, 'https://example.com/ben_portfolio2.jpg', '2025-10-02 08:15:00');
-INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (3, 2, 'https://example.com/chris_portfolio1.jpg', '2025-10-05 12:00:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (1, 1, 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1280&h=900&fit=crop', '2025-10-02 08:00:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (2, 1, 'https://images.unsplash.com/photo-1620331311520-246422fd82f9?w=1280&h=900&fit=crop', '2025-10-02 08:15:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (21, 1, 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=1280&h=900&fit=crop', '2025-10-02 08:30:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (22, 1, 'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=1280&h=900&fit=crop', '2025-10-02 08:45:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (23, 1, 'https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1280&h=900&fit=crop', '2025-10-02 09:00:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (3, 2, 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1280&h=900&fit=crop', '2025-10-05 12:00:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (18, 2, 'https://images.unsplash.com/photo-1620331311520-246422fd82f9?w=1280&h=900&fit=crop', '2025-10-05 12:15:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (19, 2, 'https://images.unsplash.com/photo-1634449571010-02389ed0f9b0?w=1280&h=900&fit=crop', '2025-10-05 12:30:00');
+INSERT INTO Pictures (ID, portfolioID, image, addedAt) VALUES (20, 2, 'https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1280&h=900&fit=crop', '2025-10-05 12:45:00');
 
-INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (1, 1, 'Men’s Fade', 25.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (1, 1, 'Men’s Haircut', 25.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (2, 1, 'Beard Trim', 15.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (3, 2, 'Kids Haircut', 20.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (4, 2, 'Classic Cut', 22.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (12, 1, 'Coloring', 30.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (13, 1, 'Perm', 35.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (14, 2, 'Women&apos;s Haircut', 45.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (11, 2, 'Highlights', 35.00);
+
+
 
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (1, 1, 'Straight');
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (2, 1, 'Wavy');
