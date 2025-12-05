@@ -183,6 +183,16 @@ INSERT INTO Specialty (ID, clipperID, hairType) VALUES (1, 1, 'Straight');
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (2, 1, 'Wavy');
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (3, 2, 'Curly');
 
+-- Fix sequences for tables that have manually inserted IDs test
+SELECT setval('useraccount_id_seq', (SELECT MAX(ID) FROM UserAccount) + 1);
+SELECT setval('client_id_seq', (SELECT MAX(ID) FROM Client) + 1);
+SELECT setval('clipper_id_seq', (SELECT MAX(ID) FROM Clipper) + 1);
+SELECT setval('portfolio_id_seq', (SELECT MAX(ID) FROM Portfolio) + 1);
+SELECT setval('pictures_id_seq', (SELECT MAX(ID) FROM Pictures) + 1);
+SELECT setval('service_id_seq', (SELECT MAX(ID) FROM Service) + 1);
+SELECT setval('specialty_id_seq', (SELECT MAX(ID) FROM Specialty) + 1);
+SELECT setval('review_id_seq', (SELECT MAX(ID) FROM Review) + 1);
+
 INSERT INTO Review (ID, clientID, clipperID, rating, comment, createdAt) VALUES (1, 1, 1, 5, 'Ben did a fantastic job with my fade!', '2025-10-20 09:00:00');
 INSERT INTO Review (ID, clientID, clipperID, rating, comment, createdAt) VALUES (2, 1, 1, 5, 'I like his style!', '2025-10-28 16:00:00');
 INSERT INTO Review (ID, clientID, clipperID, rating, comment, createdAt) VALUES (3, 1, 2, 4, 'Chris was great and very friendly!', '2025-11-05 09:00:00');
