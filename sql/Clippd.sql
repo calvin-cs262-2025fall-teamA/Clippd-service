@@ -183,7 +183,7 @@ INSERT INTO Specialty (ID, clipperID, hairType) VALUES (1, 1, 'Straight');
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (2, 1, 'Wavy');
 INSERT INTO Specialty (ID, clipperID, hairType) VALUES (3, 2, 'Curly');
 
--- Fix sequences for tables that have manually inserted IDs
+-- Fix sequences for tables that have manually inserted IDs test
 SELECT setval('useraccount_id_seq', (SELECT MAX(ID) FROM UserAccount) + 1);
 SELECT setval('client_id_seq', (SELECT MAX(ID) FROM Client) + 1);
 SELECT setval('clipper_id_seq', (SELECT MAX(ID) FROM Clipper) + 1);
