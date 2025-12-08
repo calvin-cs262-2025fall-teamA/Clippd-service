@@ -254,6 +254,8 @@ function updateUserProfile(
       city,
       state,
       profileImage,
+      phoneNumber,
+      email,
     } = request.body;
 
     if (!userId) {
@@ -268,6 +270,8 @@ function updateUserProfile(
       city,
       state,
       profileImage: profileImage ? 'image provided' : 'no image',
+      phoneNumber,
+      email,
     });
 
     const updateFields: { [key: string]: unknown } = {};
@@ -286,6 +290,12 @@ function updateUserProfile(
     }
     if (profileImage !== undefined) {
       updateFields.profileImage = profileImage;
+    }
+    if (phoneNumber !== undefined) {
+      updateFields.phone = phoneNumber;
+    }
+    if (email !== undefined) {
+      updateFields.emailAddress = email;
     }
 
     if (Object.keys(updateFields).length === 0) {
@@ -306,7 +316,7 @@ function updateUserProfile(
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
       WHERE id=$` + `{userId}
-      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage
+      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
     `;
 
     console.log('[updateUserProfile] Executing query:', query);
