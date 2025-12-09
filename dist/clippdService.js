@@ -189,7 +189,7 @@ function updateUserProfile(request, response, next) {
     // Extract user ID from request (assuming it's in cookies or session)
     // For now, we'll get it from request.body since the client sends it
     const userId = request.body.userId;
-    const { firstName, lastName, city, state, profileImage } = request.body;
+    const { firstName, lastName, city, state, profileImage, phoneNumber, email } = request.body;
     if (!userId) {
       response.status(400).json({ error: 'User ID is required' });
       return;
@@ -201,6 +201,8 @@ function updateUserProfile(request, response, next) {
       city,
       state,
       profileImage: profileImage ? 'image provided' : 'no image',
+      phoneNumber,
+      email,
     });
     const updateFields = {};
     if (firstName !== undefined) {
@@ -218,6 +220,12 @@ function updateUserProfile(request, response, next) {
     if (profileImage !== undefined) {
       updateFields.profileImage = profileImage;
     }
+    if (phoneNumber !== undefined) {
+      updateFields.phone = phoneNumber;
+    }
+    if (email !== undefined) {
+      updateFields.emailAddress = email;
+    }
     if (Object.keys(updateFields).length === 0) {
       response.status(400).json({ error: 'No fields to update' });
       return;
@@ -233,7 +241,7 @@ function updateUserProfile(request, response, next) {
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
       WHERE id=$` + `{userId}
-      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage
+      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
     `;
     console.log('[updateUserProfile] Executing query:', query);
     console.log('[updateUserProfile] With params:', params);
