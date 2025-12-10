@@ -383,6 +383,9 @@ function updateUser(
     emailAddress,
   } = request.body;
 
+  console.log('[updateUser] Received request with userId:', userId);
+  console.log('[updateUser] Request body:', request.body);
+
   // Build the update query using pg-promise parameterized syntax
   try {
     const updateFields: { [key: string]: unknown } = {};
@@ -435,18 +438,29 @@ function updateUser(
       params[paramName] = value;
     });
 
+    console.log('[updateUser] updateFields:', updateFields);
+    console.log('[updateUser] setClauses:', setClauses);
+    console.log('[updateUser] params:', params);
+
     const query = `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
       WHERE id=$` + `{userId}
-      RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
+      RETURNING id, firstName, lastName, bio, address, profileImage, city, state, emailAddress, phone
     `;
 
+    console.log('[updateUser] Query:', query);
+
     db.oneOrNone(query, params)
-      .then((data: { id: number } | null): void => {
+      .then((data: UserAccount | null): void => {
+        console.log('[updateUser] Update successful, response:', data);
+        if (data) {
+          console.log('[updateUser] Address in response:', data.address);
+        }
         returnDataOr404(response, data);
       })
       .catch((error: Error): void => {
+        console.error('[updateUser] Database error:', error);
         next(error);
       });
   } catch (error) {
@@ -507,7 +521,7 @@ function readClippers(
   db.manyOrNone(
     `SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
@@ -538,7 +552,7 @@ function readClippers(
               r.clipperID, 
               r.rating, 
               r.comment as "reviewContent",
-              r.createdAt as "date",
+              r.createdAt,
               COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') AS "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
@@ -556,6 +570,7 @@ function readClippers(
         }),
       );
 
+      console.log('[readClippers] Response sample:', clippersWithImagesAndReviews[0]);
       response.send(clippersWithImagesAndReviews);
     })
     .catch((error: Error): void => {
@@ -574,7 +589,7 @@ function readClipper(
   db.oneOrNone(
     `SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
