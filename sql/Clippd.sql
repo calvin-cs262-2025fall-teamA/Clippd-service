@@ -145,6 +145,9 @@ INSERT INTO Languages (userID, language) VALUES (2, 'Korean');
 INSERT INTO Languages (userID, language) VALUES (3, 'English');
 
 INSERT INTO Client (ID, userID) VALUES (1, 1);
+INSERT INTO Client (ID, userID) VALUES (2, 7);
+INSERT INTO Client (ID, userID) VALUES (3, 8);
+
 
 INSERT INTO Clipper (ID, userID) VALUES (1, 2);
 INSERT INTO Clipper (ID, userID) VALUES (2, 3);
