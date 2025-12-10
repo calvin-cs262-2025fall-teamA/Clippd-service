@@ -452,7 +452,7 @@ function updateUser(
     console.log('[updateUser] Query:', query);
 
     db.oneOrNone(query, params)
-      .then((data: any): void => {
+      .then((data: UserAccount | null): void => {
         console.log('[updateUser] Update successful, response:', data);
         if (data) {
           console.log('[updateUser] Address in response:', data.address);
