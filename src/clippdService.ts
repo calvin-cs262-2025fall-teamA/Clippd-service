@@ -89,7 +89,6 @@ router.post('/test-login', (req: Request, res: Response) => {
 // Authentication routes
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
-router.get('/auth/user/profile', readUserProfile);
 router.put('/auth/user/profile', updateUserProfile);
 
 // User routes
@@ -292,104 +291,6 @@ function login(request: Request, response: Response): void {
 /**
  * Update current authenticated user's profile
  * This endpoint is called by the logged-in user to update their own profile
- * @deprecated Use updateUser instead
- */
- 
-function updateUserProfile(
-  request: Request,
-  response: Response,
-  next: NextFunction,
-): void {
-  try {
-    // Extract user ID from request (assuming it's in cookies or session)
-    // For now, we'll get it from request.body since the client sends it
-    const userId = request.body.userId;
-    const { firstName, lastName, city, state, profileImage } = request.body;
-
-    if (!userId) {
-      response.status(400).json({ error: 'User ID is required' });
-      return;
-    }
-
-    console.log('[updateUserProfile] Received request with:', {
-      userId,
-      firstName,
-      lastName,
-      city,
-      state,
-      profileImage: profileImage ? 'image provided' : 'no image',
-    });
-
-    const updateFields: { [key: string]: unknown } = {};
-
-    if (firstName !== undefined) {
-      updateFields.firstName = firstName;
-    }
-    if (lastName !== undefined) {
-      updateFields.lastName = lastName;
-    }
-    if (city !== undefined) {
-      updateFields.city = city;
-    }
-    if (state !== undefined) {
-      updateFields.state = state;
-    }
-    if (profileImage !== undefined) {
-      updateFields.profileImage = profileImage;
-    }
-
-    if (Object.keys(updateFields).length === 0) {
-      response.status(400).json({ error: 'No fields to update' });
-      return;
-    }
-
-    const setClauses: string[] = [];
-    const params: { [key: string]: unknown } = { userId };
-
-    Object.entries(updateFields).forEach(([key, value], index) => {
-      const paramName = `val${index}`;
-      setClauses.push(`${key}=$` + `{${paramName}}`);
-      params[paramName] = value;
-    });
-
-    const query =
-      `
-      UPDATE UserAccount 
-      SET ${setClauses.join(', ')}
-      WHERE id=$` +
-      `{userId}
-      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage
-    `;
-
-    console.log('[updateUserProfile] Executing query:', query);
-    console.log('[updateUserProfile] With params:', params);
-
-    db.oneOrNone(query, params)
-      .then((data: unknown): void => {
-        if (data) {
-          console.log(
-            '[updateUserProfile] Update successful, returned data:',
-            data,
-          );
-          response.status(200).json(data);
-        } else {
-          console.log('[updateUserProfile] User not found with ID:', userId);
-          response.status(404).json({ error: 'User not found' });
-        }
-      })
-      .catch((error: Error): void => {
-        console.error('[updateUserProfile] Database error:', error.message);
-        next(error);
-      });
-  } catch (error: unknown) {
-    console.error('[updateUserProfile] Error:', (error as Error).message);
-    next(error as Error);
-  }
-}
-
-/**
- * Update current authenticated user's profile
- * This endpoint is called by the logged-in user to update their own profile
  */
 function updateUserProfile(
   request: Request,
@@ -427,7 +328,7 @@ function updateUserProfile(
     });
 
     const updateFields: { [key: string]: unknown } = {};
-    
+
     if (firstName !== undefined) {
       updateFields.firstName = firstName;
     }
@@ -464,10 +365,12 @@ function updateUserProfile(
       params[paramName] = value;
     });
 
-    const query = `
+    const query =
+      `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
-      WHERE id=$` + `{userId}
+      WHERE id=$` +
+      `{userId}
       RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
     `;
 
@@ -477,7 +380,10 @@ function updateUserProfile(
     db.oneOrNone(query, params)
       .then((data: unknown): void => {
         if (data) {
-          console.log('[updateUserProfile] Update successful, returned data:', data);
+          console.log(
+            '[updateUserProfile] Update successful, returned data:',
+            data,
+          );
           response.status(200).json(data);
         } else {
           console.log('[updateUserProfile] User not found with ID:', userId);
@@ -710,7 +616,10 @@ function readClippers(
         }),
       );
 
-      console.log('[readClippers] Response sample:', clippersWithImagesAndReviews[0]);
+      console.log(
+        '[readClippers] Response sample:',
+        clippersWithImagesAndReviews[0],
+      );
       response.send(clippersWithImagesAndReviews);
     })
     .catch((error: Error): void => {
