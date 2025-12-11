@@ -87,14 +87,8 @@ router.post("/test-login", (req: Request, res: Response) => {
 });
 
 // Authentication routes
-<<<<<<< Updated upstream
-router.post('/auth/signup', signup);
-router.post('/auth/login', login);
-=======
 router.post("/auth/signup", signup);
 router.post("/auth/login", login);
-router.put("/auth/user/profile", updateUserProfile);
->>>>>>> Stashed changes
 
 // User routes
 router.get("/users", readUsers);
@@ -250,19 +244,7 @@ function login(request: Request, response: Response): void {
 
     // Query database for user using template literal syntax
     db.oneOrNone(
-<<<<<<< Updated upstream
-      'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
-      { loginID, passWord },
-    )
-      .then((user: { id: number; firstName: string; lastName: string; role: string; emailAddress: string } | null) => {
-        if (user) {
-          console.log('[Login] Login successful for user:', loginID);
-          response.status(200).json(user);
-        } else {
-          console.log('[Login] Login failed - invalid credentials');
-          response.status(401).json({ error: 'Invalid credentials' });
-=======
-      "SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}",
+      "SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}",
       { loginID, passWord }
     )
       .then(
@@ -273,9 +255,6 @@ function login(request: Request, response: Response): void {
             lastName: string;
             role: string;
             emailAddress: string;
-            city: string;
-            state: string;
-            profileImage: string;
           } | null
         ) => {
           if (user) {
@@ -285,7 +264,6 @@ function login(request: Request, response: Response): void {
             console.log("[Login] Login failed - invalid credentials");
             response.status(401).json({ error: "Invalid credentials" });
           }
->>>>>>> Stashed changes
         }
       )
       .catch((error: Error) => {
@@ -302,8 +280,6 @@ function login(request: Request, response: Response): void {
   }
 }
 
-<<<<<<< Updated upstream
-=======
 /**
  * Update current authenticated user's profile
  * This endpoint is called by the logged-in user to update their own profile
@@ -400,7 +376,6 @@ function updateUserProfile(
   }
 }
 
->>>>>>> Stashed changes
 // ==================== USER CRUD ====================
 
 /**
@@ -428,27 +403,6 @@ function updateUser(
   response: Response,
   next: NextFunction
 ): void {
-<<<<<<< Updated upstream
-  db.oneOrNone(
-    `UPDATE UserAccount 
-     SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
-         emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
-         bio=\${body.bio}, profileImage=\${body.profileImage},
-         city=\${body.city}, state=\${body.state}
-     WHERE id=\${params.id} 
-     RETURNING id`,
-    {
-      params: request.params,
-      body: request.body as Partial<UserAccountInput>,
-    },
-  )
-    .then((data: { id: number } | null): void => {
-      returnDataOr404(response, data);
-    })
-    .catch((error: Error): void => {
-      next(error);
-    });
-=======
   const userId = request.params.id;
   const {
     firstName,
@@ -534,7 +488,6 @@ function updateUser(
   } catch (error) {
     next(error as Error);
   }
->>>>>>> Stashed changes
 }
 
 /**
@@ -590,7 +543,7 @@ function readClippers(
   db.manyOrNone(
     `SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.phone, u.city, u.state, u.bio, u.address, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c

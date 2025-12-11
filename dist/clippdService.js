@@ -63,14 +63,8 @@ router.post("/test-login", (req, res) => {
     }
 });
 // Authentication routes
-<<<<<<< Updated upstream
-router.post('/auth/signup', signup);
-router.post('/auth/login', login);
-=======
 router.post("/auth/signup", signup);
 router.post("/auth/login", login);
-router.put("/auth/user/profile", updateUserProfile);
->>>>>>> Stashed changes
 // User routes
 router.get("/users", readUsers);
 router.get("/users/:id", readUser);
@@ -189,25 +183,6 @@ function signup(request, response, next) {
  * Login user - validate credentials
  */
 function login(request, response) {
-<<<<<<< Updated upstream
-  try {
-    const { loginID, passWord } = request.body;
-    console.log('[Login] Request received with loginID:', loginID);
-    if (!loginID || !passWord) {
-      console.log('[Login] Missing loginID or passWord');
-      response.status(400).json({ error: 'loginID and passWord required' });
-      return;
-    }
-    // Query database for user using template literal syntax
-    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
-      .then((user) => {
-        if (user) {
-          console.log('[Login] Login successful for user:', loginID);
-          response.status(200).json(user);
-        } else {
-          console.log('[Login] Login failed - invalid credentials');
-          response.status(401).json({ error: 'Invalid credentials' });
-=======
     try {
         const { loginID, passWord } = request.body;
         console.log("[Login] Request received with loginID:", loginID);
@@ -215,10 +190,9 @@ function login(request, response) {
             console.log("[Login] Missing loginID or passWord");
             response.status(400).json({ error: "loginID and passWord required" });
             return;
->>>>>>> Stashed changes
         }
         // Query database for user using template literal syntax
-        db.oneOrNone("SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}", { loginID, passWord })
+        db.oneOrNone("SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}", { loginID, passWord })
             .then((user) => {
             if (user) {
                 console.log("[Login] Login successful for user:", loginID);
@@ -243,8 +217,6 @@ function login(request, response) {
             .json({ error: "Server error", message: error.message });
     }
 }
-<<<<<<< Updated upstream
-=======
 /**
  * Update current authenticated user's profile
  * This endpoint is called by the logged-in user to update their own profile
@@ -324,7 +296,6 @@ function updateUserProfile(request, response, next) {
         next(error);
     }
 }
->>>>>>> Stashed changes
 // ==================== USER CRUD ====================
 /**
  * Get user by ID
@@ -342,24 +313,6 @@ function readUser(request, response, next) {
  * Update user information
  */
 function updateUser(request, response, next) {
-<<<<<<< Updated upstream
-  db.oneOrNone(`UPDATE UserAccount 
-     SET firstName=\${body.firstName}, lastName=\${body.lastName}, 
-         emailAddress=\${body.emailAddress}, phone=\${body.phone}, 
-         bio=\${body.bio}, profileImage=\${body.profileImage},
-         city=\${body.city}, state=\${body.state}
-     WHERE id=\${params.id} 
-     RETURNING id`, {
-    params: request.params,
-    body: request.body,
-  })
-    .then((data) => {
-      returnDataOr404(response, data);
-    })
-    .catch((error) => {
-      next(error);
-    });
-=======
     const userId = request.params.id;
     const { firstName, lastName, bio, profileImage, images, city, state, address, phone, emailAddress, } = request.body;
     // Build the update query using pg-promise parameterized syntax
@@ -427,7 +380,6 @@ function updateUser(request, response, next) {
     catch (error) {
         next(error);
     }
->>>>>>> Stashed changes
 }
 /**
  * Delete user account
@@ -461,7 +413,7 @@ function readClippers(_request, response, next) {
     // First get all clippers with their basic info
     db.manyOrNone(`SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.phone, u.city, u.state, u.bio, u.address, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
