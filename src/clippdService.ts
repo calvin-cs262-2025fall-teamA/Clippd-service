@@ -22,16 +22,16 @@
  * @date: Fall, 2025
  */
 
-import express from "express";
-import cors from "cors";
-import pgPromise from "pg-promise";
-import "dotenv/config";
+import express from 'express';
+import cors from 'cors';
+import pgPromise from 'pg-promise';
+import 'dotenv/config';
 
 // Import types for compile-time checking.
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from 'express';
 import type {
   UserAccount,
-  UserAccountInput,
+  // UserAccountInput,
   SignupInput,
   // Clipper,
   ClipperWithDetails,
@@ -43,15 +43,15 @@ import type {
   ServiceInput,
   // Review,
   ReviewWithDetails,
-} from "./types.js";
+} from './types.js';
 
 // Set up the database
 const db = pgPromise()({
-  host: process.env.DB_SERVER || "",
-  port: parseInt(process.env.DB_PORT || "5432"),
-  database: process.env.DB_DATABASE || "",
-  user: process.env.DB_USER || "",
-  password: process.env.DB_PASSWORD || "",
+  host: process.env.DB_SERVER || '',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_DATABASE || '',
+  user: process.env.DB_USER || '',
+  password: process.env.DB_PASSWORD || '',
   ssl: {
     rejectUnauthorized: false,
   },
@@ -67,88 +67,91 @@ app.use(express.json()); // Move this to app level
 router.use(express.json());
 
 // Root endpoint
-router.get("/", readHello);
+router.get('/', readHello);
 
 // Test login endpoint
-router.post("/test-login", (req: Request, res: Response) => {
+router.post('/test-login', (req: Request, res: Response) => {
   try {
-    console.log("[TestLogin] Received request");
+    console.log('[TestLogin] Received request');
     res.status(200).json({
       id: 999,
-      firstName: "Test",
-      lastName: "User",
-      role: "Client",
-      emailAddress: "test@example.com",
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'Client',
+      emailAddress: 'test@example.com',
     });
   } catch (err) {
-    console.error("[TestLogin] Error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.error('[TestLogin] Error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
 // Authentication routes
-router.post("/auth/signup", signup);
-router.post("/auth/login", login);
+router.post('/auth/signup', signup);
+router.post('/auth/login', login);
+router.get('/auth/user/profile', readUserProfile);
+router.put('/auth/user/profile', updateUserProfile);
 
 // User routes
-router.get("/users", readUsers);
-router.get("/users/:id", readUser);
-router.put("/users/:id", updateUser);
-router.delete("/users/:id", deleteUser);
+router.get('/users', readUsers);
+router.get('/users/:id', readUser);
+router.put('/users/:id', updateUser);
+router.delete('/users/:id', deleteUser);
 
 // Clipper routes
-router.get("/clippers", readClippers);
-router.get("/clippers/:id", readClipper);
-router.post("/clippers", createClipper);
-router.put("/clippers/:id", updateClipper);
-router.delete("/clippers/:id", deleteClipper);
+router.get('/clippers', readClippers);
+router.get('/clippers/:id', readClipper);
+router.post('/clippers', createClipper);
+router.put('/clippers/:id', updateClipper);
+router.delete('/clippers/:id', deleteClipper);
 
 // Portfolio routes
-router.get("/clippers/:id/portfolio", readPortfolio);
-router.post("/clippers/:id/portfolio", createPortfolio);
-router.put("/portfolio/:id", updatePortfolio);
+router.get('/clippers/:id/portfolio', readPortfolio);
+router.post('/clippers/:id/portfolio', createPortfolio);
+router.put('/portfolio/:id', updatePortfolio);
 
 // Picture routes
-router.get("/portfolio/:id/pictures", readPictures);
-router.post("/portfolio/:id/pictures", addPicture);
-router.delete("/pictures/:id", deletePicture);
+router.get('/portfolio/:id/pictures', readPictures);
+router.post('/portfolio/:id/pictures', addPicture);
+router.delete('/pictures/:id', deletePicture);
 
 // Service routes
-router.get("/clippers/:id/services", readServices);
-router.post("/clippers/:id/services", addService);
-router.put("/services/:id", updateService);
-router.delete("/services/:id", deleteService);
+router.get('/clippers/:id/services', readServices);
+router.post('/clippers/:id/services', addService);
+router.put('/services/:id', updateService);
+router.delete('/services/:id', deleteService);
 
 // Review routes
-router.get("/clippers/:id/reviews", readReviews);
-router.post("/clippers/:id/reviews", addReview);
-router.delete("/reviews/:id", deleteReview);
+router.get('/clippers/:id/reviews', readReviews);
+router.post('/clippers/:id/reviews', addReview);
+router.delete('/reviews/:id', deleteReview);
 
 // Favorites routes
-router.get("/clients/:id/favorites", readFavorites);
-router.post("/clients/:clientId/favorites/:clipperId", addFavorite);
-router.delete("/clients/:clientId/favorites/:clipperId", removeFavorite);
+router.get('/clients/:id/favorites', readFavorites);
+router.post('/clients/:clientId/favorites/:clipperId', addFavorite);
+router.delete('/clients/:clientId/favorites/:clipperId', removeFavorite);
 
 // Specialty routes
-router.get("/clippers/:id/specialties", readSpecialties);
-router.post("/clippers/:id/specialties", addSpecialty);
-router.delete("/specialties/:id", deleteSpecialty);
+router.get('/clippers/:id/specialties', readSpecialties);
+router.post('/clippers/:id/specialties', addSpecialty);
+router.delete('/specialties/:id', deleteSpecialty);
 
 app.use(router);
 
 // Error handling middleware
-app.use((error: Error, req: Request, res: Response) => {
-  console.error("[Error Handler] Error occurred:", error);
-  console.error("[Error Handler] Error message:", error.message);
-  console.error("[Error Handler] Error stack:", error.stack);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error('[Error Handler] Error occurred:', error);
+  console.error('[Error Handler] Error message:', error.message);
+  console.error('[Error Handler] Error stack:', error.stack);
   res.status(500).json({
-    error: "Internal Server Error",
+    error: 'Internal Server Error',
     message: error.message,
-    stack: process.env.NODE_ENV === "production" ? undefined : error.stack,
+    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
   });
 });
 
-app.listen(port, "0.0.0.0", (): void => {
+app.listen(port, '0.0.0.0', (): void => {
   console.log(`Listening on port ${port} on all network interfaces`);
 });
 
@@ -169,7 +172,7 @@ function returnDataOr404(response: Response, data: unknown): void {
  * Root endpoint - health check
  */
 function readHello(_request: Request, response: Response): void {
-  response.send("Hello, Clippd service!");
+  response.send('Hello, Clippd service!');
 }
 
 // ==================== AUTHENTICATION ====================
@@ -180,7 +183,7 @@ function readHello(_request: Request, response: Response): void {
 function signup(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   // Provide defaults for optional fields using SignupInput interface
   const signupData: SignupInput = {
@@ -188,12 +191,12 @@ function signup(
     lastName: request.body.lastName,
     loginID: request.body.loginID,
     passWord: request.body.passWord,
-    role: request.body.role || "Client",
+    role: request.body.role || 'Client',
     emailAddress: request.body.emailAddress,
-    city: request.body.city || "",
-    state: request.body.state || "",
-    phone: request.body.phone || "",
-    bio: request.body.bio || "",
+    city: request.body.city || '',
+    state: request.body.state || '',
+    phone: request.body.phone || '',
+    bio: request.body.bio || '',
     profileImage: request.body.profileImage || null,
   };
 
@@ -201,23 +204,23 @@ function signup(
     `INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
      VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
      RETURNING id`,
-    signupData
+    signupData,
   )
     .then(async (data: { id: number }): Promise<void> => {
       const { role } = signupData;
 
       try {
         // Automatically create Client or Clipper record based on role
-        if (role === "Client") {
-          await db.none("INSERT INTO Client(userID) VALUES($1)", [data.id]);
+        if (role === 'Client') {
+          await db.none('INSERT INTO Client(userID) VALUES($1)', [data.id]);
           console.log(`[signup] Created Client record for userID ${data.id}`);
-        } else if (role === "Clipper") {
-          await db.none("INSERT INTO Clipper(userID) VALUES($1)", [data.id]);
+        } else if (role === 'Clipper') {
+          await db.none('INSERT INTO Clipper(userID) VALUES($1)', [data.id]);
           console.log(`[signup] Created Clipper record for userID ${data.id}`);
         }
         response.send(data);
       } catch (err) {
-        console.error("[signup] Error creating role record:", err);
+        console.error('[signup] Error creating role record:', err);
         // Return success with user ID even if role record creation fails
         response.send(data);
       }
@@ -234,18 +237,18 @@ function login(request: Request, response: Response): void {
   try {
     const { loginID, passWord } = request.body;
 
-    console.log("[Login] Request received with loginID:", loginID);
+    console.log('[Login] Request received with loginID:', loginID);
 
     if (!loginID || !passWord) {
-      console.log("[Login] Missing loginID or passWord");
-      response.status(400).json({ error: "loginID and passWord required" });
+      console.log('[Login] Missing loginID or passWord');
+      response.status(400).json({ error: 'loginID and passWord required' });
       return;
     }
 
     // Query database for user using template literal syntax
     db.oneOrNone(
-      "SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}",
-      { loginID, passWord }
+      'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
+      { loginID, passWord },
     )
       .then(
         (
@@ -255,28 +258,28 @@ function login(request: Request, response: Response): void {
             lastName: string;
             role: string;
             emailAddress: string;
-          } | null
+          } | null,
         ) => {
           if (user) {
-            console.log("[Login] Login successful for user:", loginID);
+            console.log('[Login] Login successful for user:', loginID);
             response.status(200).json(user);
           } else {
-            console.log("[Login] Login failed - invalid credentials");
-            response.status(401).json({ error: "Invalid credentials" });
+            console.log('[Login] Login failed - invalid credentials');
+            response.status(401).json({ error: 'Invalid credentials' });
           }
-        }
+        },
       )
       .catch((error: Error) => {
-        console.error("[Login] Database error:", error.message);
+        console.error('[Login] Database error:', error.message);
         response
           .status(500)
-          .json({ error: "Database error", message: error.message });
+          .json({ error: 'Database error', message: error.message });
       });
   } catch (error: unknown) {
-    console.error("[Login] Unexpected error:", (error as Error).message);
+    console.error('[Login] Unexpected error:', (error as Error).message);
     response
       .status(500)
-      .json({ error: "Server error", message: (error as Error).message });
+      .json({ error: 'Server error', message: (error as Error).message });
   }
 }
 
@@ -284,10 +287,18 @@ function login(request: Request, response: Response): void {
  * Update current authenticated user's profile
  * This endpoint is called by the logged-in user to update their own profile
  */
+// ==================== USER PROFILE ====================
+
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ * @deprecated Use updateUser instead
+ */
+ 
 function updateUserProfile(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   try {
     // Extract user ID from request (assuming it's in cookies or session)
@@ -296,17 +307,17 @@ function updateUserProfile(
     const { firstName, lastName, city, state, profileImage } = request.body;
 
     if (!userId) {
-      response.status(400).json({ error: "User ID is required" });
+      response.status(400).json({ error: 'User ID is required' });
       return;
     }
 
-    console.log("[updateUserProfile] Received request with:", {
+    console.log('[updateUserProfile] Received request with:', {
       userId,
       firstName,
       lastName,
       city,
       state,
-      profileImage: profileImage ? "image provided" : "no image",
+      profileImage: profileImage ? 'image provided' : 'no image',
     });
 
     const updateFields: { [key: string]: unknown } = {};
@@ -328,7 +339,7 @@ function updateUserProfile(
     }
 
     if (Object.keys(updateFields).length === 0) {
-      response.status(400).json({ error: "No fields to update" });
+      response.status(400).json({ error: 'No fields to update' });
       return;
     }
 
@@ -344,34 +355,34 @@ function updateUserProfile(
     const query =
       `
       UPDATE UserAccount 
-      SET ${setClauses.join(", ")}
+      SET ${setClauses.join(', ')}
       WHERE id=$` +
       `{userId}
       RETURNING id, firstName, lastName, city, state, emailAddress, profileImage
     `;
 
-    console.log("[updateUserProfile] Executing query:", query);
-    console.log("[updateUserProfile] With params:", params);
+    console.log('[updateUserProfile] Executing query:', query);
+    console.log('[updateUserProfile] With params:', params);
 
     db.oneOrNone(query, params)
       .then((data: unknown): void => {
         if (data) {
           console.log(
-            "[updateUserProfile] Update successful, returned data:",
-            data
+            '[updateUserProfile] Update successful, returned data:',
+            data,
           );
           response.status(200).json(data);
         } else {
-          console.log("[updateUserProfile] User not found with ID:", userId);
-          response.status(404).json({ error: "User not found" });
+          console.log('[updateUserProfile] User not found with ID:', userId);
+          response.status(404).json({ error: 'User not found' });
         }
       })
       .catch((error: Error): void => {
-        console.error("[updateUserProfile] Database error:", error.message);
+        console.error('[updateUserProfile] Database error:', error.message);
         next(error);
       });
   } catch (error: unknown) {
-    console.error("[updateUserProfile] Error:", (error as Error).message);
+    console.error('[updateUserProfile] Error:', (error as Error).message);
     next(error as Error);
   }
 }
@@ -384,9 +395,9 @@ function updateUserProfile(
 function readUser(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
-  db.oneOrNone("SELECT * FROM UserAccount WHERE id=${id}", request.params)
+  db.oneOrNone('SELECT * FROM UserAccount WHERE id=${id}', request.params)
     .then((data: UserAccount | null): void => {
       returnDataOr404(response, data);
     })
@@ -401,7 +412,7 @@ function readUser(
 function updateUser(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const userId = request.params.id;
   const {
@@ -454,7 +465,7 @@ function updateUser(
     }
 
     if (Object.keys(updateFields).length === 0) {
-      response.status(400).json({ error: "No fields to update" });
+      response.status(400).json({ error: 'No fields to update' });
       return;
     }
 
@@ -472,7 +483,7 @@ function updateUser(
     const query =
       `
       UPDATE UserAccount 
-      SET ${setClauses.join(", ")}
+      SET ${setClauses.join(', ')}
       WHERE id=$` +
       `{userId}
       RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
@@ -496,11 +507,11 @@ function updateUser(
 function deleteUser(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM UserAccount WHERE id=${id} RETURNING id",
-    request.params
+    'DELETE FROM UserAccount WHERE id=${id} RETURNING id',
+    request.params,
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -516,10 +527,10 @@ function deleteUser(
 function readUsers(
   _request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.manyOrNone(
-    "SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount"
+    'SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount',
   )
     .then((data: Partial<UserAccount>[]): void => {
       response.send(data);
@@ -537,7 +548,7 @@ function readUsers(
 function readClippers(
   _request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   // First get all clippers with their basic info
   db.manyOrNone(
@@ -550,7 +561,7 @@ function readClippers(
     JOIN UserAccount u ON c.userID = u.id
     LEFT JOIN Portfolio p ON c.id = p.clipperID
     LEFT JOIN Review r ON c.id = r.clipperID
-    GROUP BY c.id, u.id, p.id`
+    GROUP BY c.id, u.id, p.id`,
   )
     .then(async (clippers: ClipperWithDetails[]): Promise<void> => {
       // For each clipper, fetch their portfolio images and reviews
@@ -563,7 +574,7 @@ function readClippers(
              JOIN Portfolio p ON pic.portfolioID = p.id
              WHERE p.clipperID = $1
              ORDER BY pic.addedAt`,
-            [clipper.id]
+            [clipper.id],
           );
 
           // Fetch reviews with reviewer info
@@ -581,7 +592,7 @@ function readClippers(
             LEFT JOIN UserAccount u ON cl.userID = u.id
             WHERE r.clipperID = $1
             ORDER BY r.createdAt DESC`,
-            [clipper.id]
+            [clipper.id],
           );
 
           return {
@@ -589,7 +600,7 @@ function readClippers(
             images: images.map((img: { image: string }) => img.image),
             reviews,
           };
-        })
+        }),
       );
 
       response.send(clippersWithImagesAndReviews);
@@ -605,7 +616,7 @@ function readClippers(
 function readClipper(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
     `SELECT 
@@ -619,7 +630,7 @@ function readClipper(
     LEFT JOIN Review r ON c.id = r.clipperID
     WHERE c.id=\${id}
     GROUP BY c.id, u.id, p.id`,
-    request.params
+    request.params,
   )
     .then((data: ClipperWithDetails | null): void => {
       returnDataOr404(response, data);
@@ -635,10 +646,10 @@ function readClipper(
 function createClipper(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const { userID } = request.body;
-  db.one("INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id", {
+  db.one('INSERT INTO Clipper(userID) VALUES (${userID}) RETURNING id', {
     userID,
   })
     .then((data: { id: number }): void => {
@@ -655,7 +666,7 @@ function createClipper(
 function updateClipper(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
     `UPDATE UserAccount 
@@ -665,7 +676,7 @@ function updateClipper(
     {
       params: request.params,
       body: request.body,
-    }
+    },
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -681,11 +692,11 @@ function updateClipper(
 function deleteClipper(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM Clipper WHERE id=${id} RETURNING id",
-    request.params
+    'DELETE FROM Clipper WHERE id=${id} RETURNING id',
+    request.params,
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -703,9 +714,9 @@ function deleteClipper(
 function readPortfolio(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
-  db.oneOrNone("SELECT * FROM Portfolio WHERE clipperID=${id}", request.params)
+  db.oneOrNone('SELECT * FROM Portfolio WHERE clipperID=${id}', request.params)
     .then((data: Portfolio | null): void => {
       returnDataOr404(response, data);
     })
@@ -720,7 +731,7 @@ function readPortfolio(
 function createPortfolio(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const portfolioData = {
     ...request.body,
@@ -730,7 +741,7 @@ function createPortfolio(
     `INSERT INTO Portfolio(clipperID, shopName, shopAddress, city, state, latitude, longitude, description)
      VALUES (\${clipperID}, \${shopName}, \${shopAddress}, \${city}, \${state}, \${latitude}, \${longitude}, \${description})
      RETURNING id`,
-    portfolioData as PortfolioInput
+    portfolioData as PortfolioInput,
   )
     .then((data: { id: number }): void => {
       response.send(data);
@@ -746,7 +757,7 @@ function createPortfolio(
 function updatePortfolio(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
     `UPDATE Portfolio 
@@ -757,7 +768,7 @@ function updatePortfolio(
     {
       params: request.params,
       body: request.body as Partial<PortfolioInput>,
-    }
+    },
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -775,11 +786,11 @@ function updatePortfolio(
 function readPictures(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.manyOrNone(
-    "SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC",
-    request.params
+    'SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC',
+    request.params,
   )
     .then((data: Picture[]): void => {
       response.send(data);
@@ -795,12 +806,12 @@ function readPictures(
 function addPicture(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const { image } = request.body;
   db.one(
-    "INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id",
-    { id: request.params.id, image }
+    'INSERT INTO Pictures(portfolioID, image) VALUES (${id}, ${image}) RETURNING id',
+    { id: request.params.id, image },
   )
     .then((data: { id: number }): void => {
       response.send(data);
@@ -816,11 +827,11 @@ function addPicture(
 function deletePicture(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM Pictures WHERE id=${id} RETURNING id",
-    request.params
+    'DELETE FROM Pictures WHERE id=${id} RETURNING id',
+    request.params,
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -838,9 +849,9 @@ function deletePicture(
 function readServices(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
-  db.manyOrNone("SELECT * FROM Service WHERE clipperID=${id}", request.params)
+  db.manyOrNone('SELECT * FROM Service WHERE clipperID=${id}', request.params)
     .then((data: Service[]): void => {
       response.send(data);
     })
@@ -855,15 +866,15 @@ function readServices(
 function addService(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const serviceData = {
     clipperID: request.params.id,
     ...request.body,
   };
   db.one(
-    "INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id",
-    serviceData as ServiceInput
+    'INSERT INTO Service(clipperID, serviceName, price, durationMinutes) VALUES (${clipperID}, ${serviceName}, ${price}, ${durationMinutes}) RETURNING id',
+    serviceData as ServiceInput,
   )
     .then((data: { id: number }): void => {
       response.send(data);
@@ -879,7 +890,7 @@ function addService(
 function updateService(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
     `UPDATE Service 
@@ -889,7 +900,7 @@ function updateService(
     {
       params: request.params,
       body: request.body,
-    }
+    },
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -905,11 +916,11 @@ function updateService(
 function deleteService(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM Service WHERE id=${id} RETURNING id",
-    request.params
+    'DELETE FROM Service WHERE id=${id} RETURNING id',
+    request.params,
   )
     .then((data: { id: number } | null): void => {
       returnDataOr404(response, data);
@@ -927,7 +938,7 @@ function deleteService(
 function readReviews(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.manyOrNone(
     `SELECT 
@@ -939,13 +950,13 @@ function readReviews(
     JOIN useraccount u ON c.userid = u.id
     WHERE r.clipperid=$1
     ORDER BY r.id DESC`,
-    [parseInt(request.params.id)]
+    [parseInt(request.params.id)],
   )
     .then((data: ReviewWithDetails[]): void => {
       response.send(data);
     })
     .catch((error: Error): void => {
-      console.error("[readReviews] Database error:", error.message);
+      console.error('[readReviews] Database error:', error.message);
       next(error);
     });
 }
@@ -956,7 +967,7 @@ function readReviews(
 function addReview(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const { clientID, userID, clipperID, rating, comment } = request.body;
 
@@ -967,34 +978,34 @@ function addReview(
     }
     if (userID !== undefined && userID !== null) {
       const clientData: { id: number } | null = await db.oneOrNone(
-        "SELECT id FROM client WHERE userid=$1",
-        [userID]
+        'SELECT id FROM client WHERE userid=$1',
+        [userID],
       );
       if (!clientData) {
         throw new Error(`No client found for userID ${userID}`);
       }
       return clientData.id;
     }
-    throw new Error("Either clientID or userID must be provided");
+    throw new Error('Either clientID or userID must be provided');
   };
 
   // First, ensure the sequence is set correctly
   db.oneOrNone(
-    "SELECT setval(pg_get_serial_sequence('review', 'id'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)"
+    'SELECT setval(pg_get_serial_sequence(\'review\', \'id\'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)',
   )
     .then(async (): Promise<{ id: number }> => {
       const finalClientID = await lookupClientID();
       // Now insert the review
       return db.one(
-        "INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id",
-        [finalClientID, clipperID, rating, comment]
+        'INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id',
+        [finalClientID, clipperID, rating, comment],
       );
     })
     .then(async (data: { id: number }): Promise<void> => {
       // Calculate average rating for this clipper
       const ratingData: { averageRating: number } = await db.one(
         'SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1',
-        [clipperID]
+        [clipperID],
       );
       response.status(201).json({
         id: data.id,
@@ -1002,8 +1013,8 @@ function addReview(
       });
     })
     .catch((error: Error): void => {
-      console.error("[addReview] Database error:", error.message);
-      console.error("[addReview] Full error:", error);
+      console.error('[addReview] Database error:', error.message);
+      console.error('[addReview] Full error:', error);
       next(error);
     });
 }
@@ -1017,15 +1028,15 @@ function addReview(
 function deleteReview(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const { id } = request.params;
 
   // First, get the clipperID before deleting
-  db.oneOrNone("SELECT clipperid FROM review WHERE id=$1", [parseInt(id)])
+  db.oneOrNone('SELECT clipperid FROM review WHERE id=$1', [parseInt(id)])
     .then(async (reviewData: { clipperid: number } | null): Promise<void> => {
       if (!reviewData) {
-        response.status(404).json({ error: "Review not found" });
+        response.status(404).json({ error: 'Review not found' });
         return;
       }
 
@@ -1033,19 +1044,19 @@ function deleteReview(
 
       // Delete the review
       const data: { id: number } | null = await db.oneOrNone(
-        "DELETE FROM Review WHERE id=$1 RETURNING id",
-        [parseInt(id)]
+        'DELETE FROM Review WHERE id=$1 RETURNING id',
+        [parseInt(id)],
       );
 
       if (!data) {
-        response.status(404).json({ error: "Review not found" });
+        response.status(404).json({ error: 'Review not found' });
         return;
       }
 
       // Calculate average rating for this clipper
       const ratingData: { averageRating: number | null } = await db.one(
         'SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1',
-        [clipperID]
+        [clipperID],
       );
 
       response.status(200).json({
@@ -1054,7 +1065,7 @@ function deleteReview(
       });
     })
     .catch((error: Error): void => {
-      console.error("[deleteReview] Database error:", error.message);
+      console.error('[deleteReview] Database error:', error.message);
       next(error);
     });
 }
@@ -1067,7 +1078,7 @@ function deleteReview(
 function readFavorites(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.manyOrNone(
     `SELECT 
@@ -1084,7 +1095,7 @@ function readFavorites(
     WHERE fc.clientID=\${id}
     GROUP BY c.id, u.id, p.id
     ORDER BY fc.favoritedAt DESC`,
-    request.params
+    request.params,
   )
     .then((data: ClipperWithDetails[]): void => {
       response.send(data);
@@ -1100,11 +1111,11 @@ function readFavorites(
 function addFavorite(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.one(
-    "INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID",
-    request.params
+    'INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID',
+    request.params,
   )
     .then((data: { clientid: number; clipperid: number }): void => {
       response.send(data);
@@ -1120,11 +1131,11 @@ function addFavorite(
 function removeFavorite(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID",
-    request.params
+    'DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID',
+    request.params,
   )
     .then((data: { clientid: number } | null): void => {
       returnDataOr404(response, data);
@@ -1142,9 +1153,9 @@ function removeFavorite(
 function readSpecialties(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
-  db.manyOrNone("SELECT * FROM Specialty WHERE clipperID=${id}", request.params)
+  db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
     .then((data) => response.send(data))
     .catch(next);
 }
@@ -1155,7 +1166,7 @@ function readSpecialties(
 function addSpecialty(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const data = {
     clipperID: request.params.id,
@@ -1163,8 +1174,8 @@ function addSpecialty(
   };
 
   db.one(
-    "INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id",
-    data
+    'INSERT INTO Specialty(clipperID, hairType) VALUES (${clipperID}, ${hairType}) RETURNING id',
+    data,
   )
     .then((data) => response.send(data))
     .catch(next);
@@ -1176,11 +1187,11 @@ function addSpecialty(
 function deleteSpecialty(
   request: Request,
   response: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   db.oneOrNone(
-    "DELETE FROM Specialty WHERE id=${id} RETURNING id",
-    request.params
+    'DELETE FROM Specialty WHERE id=${id} RETURNING id',
+    request.params,
   )
     .then((data) => returnDataOr404(response, data))
     .catch(next);

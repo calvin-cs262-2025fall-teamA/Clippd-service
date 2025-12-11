@@ -9,7 +9,7 @@ export interface UserAccount {
   lastName: string;
   loginID: string;
   passWord: string;
-  role: "Client" | "Clipper";
+  role: 'Client' | 'Clipper';
   nickname?: string;
   address?: string;
   city: string;
@@ -28,7 +28,7 @@ export interface UserAccountInput {
   lastName: string;
   loginID: string;
   password: string; // mapped to passWord in DB
-  role: "Client" | "Clipper";
+  role: 'Client' | 'Clipper';
   nickname?: string;
   address?: string;
   city: string;
@@ -44,7 +44,7 @@ export interface SignupInput {
   lastName: string;
   loginID: string;
   passWord: string;
-  role?: "Client" | "Clipper";
+  role?: 'Client' | 'Clipper';
   city?: string;
   state?: string;
   emailAddress: string;
