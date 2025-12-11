@@ -103,7 +103,8 @@ router.post('/clippers/:id/specialties', addSpecialty);
 router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
 // Error handling middleware
-app.use((error, req, res) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((error, req, res, next) => {
   console.error('[Error Handler] Error occurred:', error);
   console.error('[Error Handler] Error message:', error.message);
   console.error('[Error Handler] Error stack:', error.stack);
@@ -138,11 +139,40 @@ function readHello(_request, response) {
  * Sign up a new user
  */
 function signup(request, response, next) {
+  // Provide defaults for optional fields using SignupInput interface
+  const signupData = {
+    firstName: request.body.firstName,
+    lastName: request.body.lastName,
+    loginID: request.body.loginID,
+    passWord: request.body.passWord,
+    role: request.body.role || 'Client',
+    emailAddress: request.body.emailAddress,
+    city: request.body.city || '',
+    state: request.body.state || '',
+    phone: request.body.phone || '',
+    bio: request.body.bio || '',
+    profileImage: request.body.profileImage || null,
+  };
   db.one(`INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
      VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
-     RETURNING id`, request.body)
-    .then((data) => {
-      response.send(data);
+     RETURNING id`, signupData)
+    .then(async (data) => {
+      const { role } = signupData;
+      try {
+        // Automatically create Client or Clipper record based on role
+        if (role === 'Client') {
+          await db.none('INSERT INTO Client(userID) VALUES($1)', [data.id]);
+          console.log(`[signup] Created Client record for userID ${data.id}`);
+        } else if (role === 'Clipper') {
+          await db.none('INSERT INTO Clipper(userID) VALUES($1)', [data.id]);
+          console.log(`[signup] Created Clipper record for userID ${data.id}`);
+        }
+        response.send(data);
+      } catch (err) {
+        console.error('[signup] Error creating role record:', err);
+        // Return success with user ID even if role record creation fails
+        response.send(data);
+      }
     })
     .catch((error) => {
       next(error);
@@ -173,13 +203,22 @@ function login(request, response) {
       })
       .catch((error) => {
         console.error('[Login] Database error:', error.message);
-        response.status(500).json({ error: 'Database error', message: error.message });
+        response
+          .status(500)
+          .json({ error: 'Database error', message: error.message });
       });
   } catch (error) {
     console.error('[Login] Unexpected error:', error.message);
-    response.status(500).json({ error: 'Server error', message: error.message });
+    response
+      .status(500)
+      .json({ error: 'Server error', message: error.message });
   }
 }
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ */
+// ==================== USER PROFILE ====================
 /**
  * Update current authenticated user's profile
  * This endpoint is called by the logged-in user to update their own profile
@@ -240,7 +279,8 @@ function updateUserProfile(request, response, next) {
     const query = `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
-      WHERE id=$` + `{userId}
+      WHERE id=$` +
+            `{userId}
       RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
     `;
     console.log('[updateUserProfile] Executing query:', query);
@@ -283,8 +323,6 @@ function readUser(request, response, next) {
 function updateUser(request, response, next) {
   const userId = request.params.id;
   const { firstName, lastName, bio, profileImage, images, city, state, address, phone, emailAddress } = request.body;
-  console.log('[updateUser] Received request with userId:', userId);
-  console.log('[updateUser] Request body:', request.body);
   // Build the update query using pg-promise parameterized syntax
   try {
     const updateFields = {};
@@ -332,26 +370,18 @@ function updateUser(request, response, next) {
       setClauses.push(`${key}=$` + `{${paramName}}`);
       params[paramName] = value;
     });
-    console.log('[updateUser] updateFields:', updateFields);
-    console.log('[updateUser] setClauses:', setClauses);
-    console.log('[updateUser] params:', params);
     const query = `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
-      WHERE id=$` + `{userId}
-      RETURNING id, firstName, lastName, bio, address, profileImage, city, state, emailAddress, phone
+      WHERE id=$` +
+            `{userId}
+      RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
     `;
-    console.log('[updateUser] Query:', query);
     db.oneOrNone(query, params)
       .then((data) => {
-        console.log('[updateUser] Update successful, response:', data);
-        if (data) {
-          console.log('[updateUser] Address in response:', data.address);
-        }
         returnDataOr404(response, data);
       })
       .catch((error) => {
-        console.error('[updateUser] Database error:', error);
         next(error);
       });
   } catch (error) {
@@ -390,7 +420,7 @@ function readClippers(_request, response, next) {
   // First get all clippers with their basic info
   db.manyOrNone(`SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.phone, u.city, u.state, u.bio, u.address, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
@@ -674,12 +704,27 @@ function readReviews(request, response, next) {
  * Add review for clipper
  */
 function addReview(request, response, next) {
-  const { clientID, clipperID, rating, comment } = request.body;
-  // First, ensure the sequence is set correctly
+  const { clientID, userID, clipperID, rating, comment } = request.body;
+  // If userID is provided instead of clientID, look up the clientID
+  const lookupClientID = async () => {
+    if (clientID !== undefined && clientID !== null) {
+      return clientID;
+    }
+    if (userID !== undefined && userID !== null) {
+      const clientData = await db.oneOrNone('SELECT id FROM client WHERE userid=$1', [userID]);
+      if (!clientData) {
+        throw new Error(`No client found for userID ${userID}`);
+      }
+      return clientData.id;
+    }
+    throw new Error('Either clientID or userID must be provided');
+  };
+    // First, ensure the sequence is set correctly
   db.oneOrNone('SELECT setval(pg_get_serial_sequence(\'review\', \'id\'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)')
-    .then(() => {
+    .then(async () => {
+      const finalClientID = await lookupClientID();
       // Now insert the review
-      return db.one('INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id', [clientID, clipperID, rating, comment]);
+      return db.one('INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id', [finalClientID, clipperID, rating, comment]);
     })
     .then(async (data) => {
       // Calculate average rating for this clipper

@@ -39,6 +39,20 @@ export interface UserAccountInput {
   profileImage?: string;
 }
 
+export interface SignupInput {
+  firstName: string;
+  lastName: string;
+  loginID: string;
+  passWord: string;
+  role?: 'Client' | 'Clipper';
+  city?: string;
+  state?: string;
+  emailAddress: string;
+  phone?: string;
+  bio?: string;
+  profileImage?: string | null;
+}
+
 export interface Language {
   userID: number;
   language: string;

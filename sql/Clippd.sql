@@ -176,7 +176,7 @@ INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (3, 2, 'Kids Hair
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (4, 2, 'Classic Cut', 22.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (12, 1, 'Coloring', 30.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (13, 1, 'Perm', 35.00);
-INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (14, 2, 'Women&apos;s Haircut', 45.00);
+INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (14, 2, 'Women’s Haircut', 45.00);
 INSERT INTO Service (ID, clipperID, serviceName, price) VALUES (11, 2, 'Highlights', 35.00);
 
 

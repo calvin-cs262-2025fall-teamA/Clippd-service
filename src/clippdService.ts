@@ -31,7 +31,8 @@ import 'dotenv/config';
 import type { Request, Response, NextFunction } from 'express';
 import type {
   UserAccount,
-  UserAccountInput,
+  // UserAccountInput,
+  SignupInput,
   // Clipper,
   ClipperWithDetails,
   // FavoriteClipper,
@@ -62,7 +63,7 @@ const port: number = parseInt(process.env.PORT as string) || 3000;
 const router = express.Router();
 
 app.use(cors());
-app.use(express.json());  // Move this to app level
+app.use(express.json()); // Move this to app level
 router.use(express.json());
 
 // Root endpoint
@@ -137,11 +138,12 @@ router.delete('/specialties/:id', deleteSpecialty);
 app.use(router);
 
 // Error handling middleware
-app.use((error: Error, req: Request, res: Response) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('[Error Handler] Error occurred:', error);
   console.error('[Error Handler] Error message:', error.message);
   console.error('[Error Handler] Error stack:', error.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal Server Error',
     message: error.message,
     stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
@@ -182,14 +184,45 @@ function signup(
   response: Response,
   next: NextFunction,
 ): void {
+  // Provide defaults for optional fields using SignupInput interface
+  const signupData: SignupInput = {
+    firstName: request.body.firstName,
+    lastName: request.body.lastName,
+    loginID: request.body.loginID,
+    passWord: request.body.passWord,
+    role: request.body.role || 'Client',
+    emailAddress: request.body.emailAddress,
+    city: request.body.city || '',
+    state: request.body.state || '',
+    phone: request.body.phone || '',
+    bio: request.body.bio || '',
+    profileImage: request.body.profileImage || null,
+  };
+
   db.one(
     `INSERT INTO UserAccount(firstName, lastName, loginID, passWord, role, city, state, emailAddress, phone, bio, profileImage)
      VALUES (\${firstName}, \${lastName}, \${loginID}, \${passWord}, \${role}, \${city}, \${state}, \${emailAddress}, \${phone}, \${bio}, \${profileImage})
      RETURNING id`,
-    request.body as UserAccountInput,
+    signupData,
   )
-    .then((data: { id: number }): void => {
-      response.send(data);
+    .then(async (data: { id: number }): Promise<void> => {
+      const { role } = signupData;
+
+      try {
+        // Automatically create Client or Clipper record based on role
+        if (role === 'Client') {
+          await db.none('INSERT INTO Client(userID) VALUES($1)', [data.id]);
+          console.log(`[signup] Created Client record for userID ${data.id}`);
+        } else if (role === 'Clipper') {
+          await db.none('INSERT INTO Clipper(userID) VALUES($1)', [data.id]);
+          console.log(`[signup] Created Clipper record for userID ${data.id}`);
+        }
+        response.send(data);
+      } catch (err) {
+        console.error('[signup] Error creating role record:', err);
+        // Return success with user ID even if role record creation fails
+        response.send(data);
+      }
     })
     .catch((error: Error): void => {
       next(error);
@@ -202,9 +235,9 @@ function signup(
 function login(request: Request, response: Response): void {
   try {
     const { loginID, passWord } = request.body;
-    
+
     console.log('[Login] Request received with loginID:', loginID);
-    
+
     if (!loginID || !passWord) {
       console.log('[Login] Missing loginID or passWord');
       response.status(400).json({ error: 'loginID and passWord required' });
@@ -216,24 +249,44 @@ function login(request: Request, response: Response): void {
       'SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
       { loginID, passWord },
     )
-      .then((user: { id: number; firstName: string; lastName: string; role: string; emailAddress: string; city: string; state: string; profileImage: string } | null) => {
-        if (user) {
-          console.log('[Login] Login successful for user:', loginID);
-          response.status(200).json(user);
-        } else {
-          console.log('[Login] Login failed - invalid credentials');
-          response.status(401).json({ error: 'Invalid credentials' });
-        }
-      })
+      .then(
+        (
+          user: {
+            id: number;
+            firstName: string;
+            lastName: string;
+            role: string;
+            emailAddress: string;
+          } | null,
+        ) => {
+          if (user) {
+            console.log('[Login] Login successful for user:', loginID);
+            response.status(200).json(user);
+          } else {
+            console.log('[Login] Login failed - invalid credentials');
+            response.status(401).json({ error: 'Invalid credentials' });
+          }
+        },
+      )
       .catch((error: Error) => {
         console.error('[Login] Database error:', error.message);
-        response.status(500).json({ error: 'Database error', message: error.message });
+        response
+          .status(500)
+          .json({ error: 'Database error', message: error.message });
       });
   } catch (error: unknown) {
     console.error('[Login] Unexpected error:', (error as Error).message);
-    response.status(500).json({ error: 'Server error', message: (error as Error).message });
+    response
+      .status(500)
+      .json({ error: 'Server error', message: (error as Error).message });
   }
 }
+
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ */
+// ==================== USER PROFILE ====================
 
 /**
  * Update current authenticated user's profile
@@ -275,7 +328,7 @@ function updateUserProfile(
     });
 
     const updateFields: { [key: string]: unknown } = {};
-    
+
     if (firstName !== undefined) {
       updateFields.firstName = firstName;
     }
@@ -312,10 +365,12 @@ function updateUserProfile(
       params[paramName] = value;
     });
 
-    const query = `
+    const query =
+      `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
-      WHERE id=$` + `{userId}
+      WHERE id=$` +
+      `{userId}
       RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
     `;
 
@@ -325,7 +380,10 @@ function updateUserProfile(
     db.oneOrNone(query, params)
       .then((data: unknown): void => {
         if (data) {
-          console.log('[updateUserProfile] Update successful, returned data:', data);
+          console.log(
+            '[updateUserProfile] Update successful, returned data:',
+            data,
+          );
           response.status(200).json(data);
         } else {
           console.log('[updateUserProfile] User not found with ID:', userId);
@@ -383,13 +441,10 @@ function updateUser(
     emailAddress,
   } = request.body;
 
-  console.log('[updateUser] Received request with userId:', userId);
-  console.log('[updateUser] Request body:', request.body);
-
   // Build the update query using pg-promise parameterized syntax
   try {
     const updateFields: { [key: string]: unknown } = {};
-    
+
     // Convert empty strings to NULL for optional fields
     if (firstName !== undefined) {
       updateFields.firstName = firstName || null;
@@ -438,29 +493,20 @@ function updateUser(
       params[paramName] = value;
     });
 
-    console.log('[updateUser] updateFields:', updateFields);
-    console.log('[updateUser] setClauses:', setClauses);
-    console.log('[updateUser] params:', params);
-
-    const query = `
+    const query =
+      `
       UPDATE UserAccount 
       SET ${setClauses.join(', ')}
-      WHERE id=$` + `{userId}
-      RETURNING id, firstName, lastName, bio, address, profileImage, city, state, emailAddress, phone
+      WHERE id=$` +
+      `{userId}
+      RETURNING id, firstName, lastName, bio, profileImage, city, state, emailAddress, phone
     `;
 
-    console.log('[updateUser] Query:', query);
-
     db.oneOrNone(query, params)
-      .then((data: UserAccount | null): void => {
-        console.log('[updateUser] Update successful, response:', data);
-        if (data) {
-          console.log('[updateUser] Address in response:', data.address);
-        }
+      .then((data: { id: number } | null): void => {
         returnDataOr404(response, data);
       })
       .catch((error: Error): void => {
-        console.error('[updateUser] Database error:', error);
         next(error);
       });
   } catch (error) {
@@ -521,7 +567,7 @@ function readClippers(
   db.manyOrNone(
     `SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.phone, u.city, u.state, u.bio, u.address, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
@@ -570,7 +616,10 @@ function readClippers(
         }),
       );
 
-      console.log('[readClippers] Response sample:', clippersWithImagesAndReviews[0]);
+      console.log(
+        '[readClippers] Response sample:',
+        clippersWithImagesAndReviews[0],
+      );
       response.send(clippersWithImagesAndReviews);
     })
     .catch((error: Error): void => {
@@ -937,17 +986,36 @@ function addReview(
   response: Response,
   next: NextFunction,
 ): void {
-  const { clientID, clipperID, rating, comment } = request.body;
-  
+  const { clientID, userID, clipperID, rating, comment } = request.body;
+
+  // If userID is provided instead of clientID, look up the clientID
+  const lookupClientID = async (): Promise<number> => {
+    if (clientID !== undefined && clientID !== null) {
+      return clientID;
+    }
+    if (userID !== undefined && userID !== null) {
+      const clientData: { id: number } | null = await db.oneOrNone(
+        'SELECT id FROM client WHERE userid=$1',
+        [userID],
+      );
+      if (!clientData) {
+        throw new Error(`No client found for userID ${userID}`);
+      }
+      return clientData.id;
+    }
+    throw new Error('Either clientID or userID must be provided');
+  };
+
   // First, ensure the sequence is set correctly
   db.oneOrNone(
     'SELECT setval(pg_get_serial_sequence(\'review\', \'id\'), (SELECT COALESCE(MAX(id), 0) FROM review) + 1)',
   )
-    .then((): Promise<{ id: number }> => {
+    .then(async (): Promise<{ id: number }> => {
+      const finalClientID = await lookupClientID();
       // Now insert the review
       return db.one(
         'INSERT INTO review(clientid, clipperid, rating, comment) VALUES ($1, $2, $3, $4) RETURNING id',
-        [clientID, clipperID, rating, comment],
+        [finalClientID, clipperID, rating, comment],
       );
     })
     .then(async (data: { id: number }): Promise<void> => {
@@ -956,9 +1024,9 @@ function addReview(
         'SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1',
         [clipperID],
       );
-      response.status(201).json({ 
-        id: data.id, 
-        averageRating: ratingData.averageRating, 
+      response.status(201).json({
+        id: data.id,
+        averageRating: ratingData.averageRating,
       });
     })
     .catch((error: Error): void => {
@@ -980,39 +1048,36 @@ function deleteReview(
   next: NextFunction,
 ): void {
   const { id } = request.params;
-  
+
   // First, get the clipperID before deleting
-  db.oneOrNone(
-    'SELECT clipperid FROM review WHERE id=$1',
-    [parseInt(id)],
-  )
+  db.oneOrNone('SELECT clipperid FROM review WHERE id=$1', [parseInt(id)])
     .then(async (reviewData: { clipperid: number } | null): Promise<void> => {
       if (!reviewData) {
         response.status(404).json({ error: 'Review not found' });
         return;
       }
-      
+
       const clipperID = reviewData.clipperid;
-      
+
       // Delete the review
       const data: { id: number } | null = await db.oneOrNone(
         'DELETE FROM Review WHERE id=$1 RETURNING id',
         [parseInt(id)],
       );
-      
+
       if (!data) {
         response.status(404).json({ error: 'Review not found' });
         return;
       }
-      
+
       // Calculate average rating for this clipper
       const ratingData: { averageRating: number | null } = await db.one(
         'SELECT ROUND(AVG(rating)::numeric, 1) as "averageRating" FROM review WHERE clipperid=$1',
         [clipperID],
       );
-      
-      response.status(200).json({ 
-        id: data.id, 
+
+      response.status(200).json({
+        id: data.id,
         averageRating: ratingData.averageRating || 0,
       });
     })
