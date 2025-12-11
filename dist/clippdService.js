@@ -64,6 +64,7 @@ router.post('/test-login', (req, res) => {
 // Authentication routes
 router.post('/auth/signup', signup);
 router.post('/auth/login', login);
+router.put('/auth/user/profile', updateUserProfile);
 // User routes
 router.get('/users', readUsers);
 router.get('/users/:id', readUser);
@@ -190,7 +191,7 @@ function login(request, response) {
       return;
     }
     // Query database for user using template literal syntax
-    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
+    db.oneOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}', { loginID, passWord })
       .then((user) => {
         if (user) {
           console.log('[Login] Login successful for user:', loginID);
@@ -297,6 +298,90 @@ function updateUserProfile(request, response, next) {
     next(error);
   }
 }
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ */
+function updateUserProfile(request, response, next) {
+  try {
+    // Extract user ID from request (assuming it's in cookies or session)
+    // For now, we'll get it from request.body since the client sends it
+    const userId = request.body.userId;
+    const { firstName, lastName, city, state, profileImage, phoneNumber, email } = request.body;
+    if (!userId) {
+      response.status(400).json({ error: 'User ID is required' });
+      return;
+    }
+    console.log('[updateUserProfile] Received request with:', {
+      userId,
+      firstName,
+      lastName,
+      city,
+      state,
+      profileImage: profileImage ? 'image provided' : 'no image',
+      phoneNumber,
+      email,
+    });
+    const updateFields = {};
+    if (firstName !== undefined) {
+      updateFields.firstName = firstName;
+    }
+    if (lastName !== undefined) {
+      updateFields.lastName = lastName;
+    }
+    if (city !== undefined) {
+      updateFields.city = city;
+    }
+    if (state !== undefined) {
+      updateFields.state = state;
+    }
+    if (profileImage !== undefined) {
+      updateFields.profileImage = profileImage;
+    }
+    if (phoneNumber !== undefined) {
+      updateFields.phone = phoneNumber;
+    }
+    if (email !== undefined) {
+      updateFields.emailAddress = email;
+    }
+    if (Object.keys(updateFields).length === 0) {
+      response.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+    const setClauses = [];
+    const params = { userId };
+    Object.entries(updateFields).forEach(([key, value], index) => {
+      const paramName = `val${index}`;
+      setClauses.push(`${key}=$` + `{${paramName}}`);
+      params[paramName] = value;
+    });
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$` + `{userId}
+      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
+    `;
+    console.log('[updateUserProfile] Executing query:', query);
+    console.log('[updateUserProfile] With params:', params);
+    db.oneOrNone(query, params)
+      .then((data) => {
+        if (data) {
+          console.log('[updateUserProfile] Update successful, returned data:', data);
+          response.status(200).json(data);
+        } else {
+          console.log('[updateUserProfile] User not found with ID:', userId);
+          response.status(404).json({ error: 'User not found' });
+        }
+      })
+      .catch((error) => {
+        console.error('[updateUserProfile] Database error:', error.message);
+        next(error);
+      });
+  } catch (error) {
+    console.error('[updateUserProfile] Error:', error.message);
+    next(error);
+  }
+}
 // ==================== USER CRUD ====================
 /**
  * Get user by ID
@@ -316,6 +401,8 @@ function readUser(request, response, next) {
 function updateUser(request, response, next) {
   const userId = request.params.id;
   const { firstName, lastName, bio, profileImage, images, city, state, address, phone, emailAddress } = request.body;
+  console.log('[updateUser] Received request with userId:', userId);
+  console.log('[updateUser] Request body:', request.body);
   // Build the update query using pg-promise parameterized syntax
   try {
     const updateFields = {};
@@ -375,6 +462,26 @@ function updateUser(request, response, next) {
         returnDataOr404(response, data);
       })
       .catch((error) => {
+    console.log('[updateUser] updateFields:', updateFields);
+    console.log('[updateUser] setClauses:', setClauses);
+    console.log('[updateUser] params:', params);
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$` + `{userId}
+      RETURNING id, firstName, lastName, bio, address, profileImage, city, state, emailAddress, phone
+    `;
+    console.log('[updateUser] Query:', query);
+    db.oneOrNone(query, params)
+      .then((data) => {
+        console.log('[updateUser] Update successful, response:', data);
+        if (data) {
+          console.log('[updateUser] Address in response:', data.address);
+        }
+        returnDataOr404(response, data);
+      })
+      .catch((error) => {
+        console.error('[updateUser] Database error:', error);
         next(error);
       });
   } catch (error) {
@@ -413,7 +520,7 @@ function readClippers(_request, response, next) {
   // First get all clippers with their basic info
   db.manyOrNone(`SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.phone, u.city, u.state, u.bio, u.address, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
@@ -437,7 +544,7 @@ function readClippers(_request, response, next) {
               r.clipperID, 
               r.rating, 
               r.comment as "reviewContent",
-              r.createdAt as "date",
+              r.createdAt,
               COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') AS "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
@@ -450,6 +557,7 @@ function readClippers(_request, response, next) {
           reviews,
         };
       }));
+      console.log('[readClippers] Response sample:', clippersWithImagesAndReviews[0]);
       response.send(clippersWithImagesAndReviews);
     })
     .catch((error) => {
@@ -462,7 +570,7 @@ function readClippers(_request, response, next) {
 function readClipper(request, response, next) {
   db.oneOrNone(`SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c

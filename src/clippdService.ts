@@ -247,7 +247,7 @@ function login(request: Request, response: Response): void {
 
     // Query database for user using template literal syntax
     db.oneOrNone(
-      'SELECT id, firstName, lastName, role, emailAddress FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
+      'SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount WHERE loginID = ${loginID} AND passWord = ${passWord}',
       { loginID, passWord },
     )
       .then(
@@ -371,6 +371,113 @@ function updateUserProfile(
             '[updateUserProfile] Update successful, returned data:',
             data,
           );
+          response.status(200).json(data);
+        } else {
+          console.log('[updateUserProfile] User not found with ID:', userId);
+          response.status(404).json({ error: 'User not found' });
+        }
+      })
+      .catch((error: Error): void => {
+        console.error('[updateUserProfile] Database error:', error.message);
+        next(error);
+      });
+  } catch (error: unknown) {
+    console.error('[updateUserProfile] Error:', (error as Error).message);
+    next(error as Error);
+  }
+}
+
+/**
+ * Update current authenticated user's profile
+ * This endpoint is called by the logged-in user to update their own profile
+ */
+function updateUserProfile(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void {
+  try {
+    // Extract user ID from request (assuming it's in cookies or session)
+    // For now, we'll get it from request.body since the client sends it
+    const userId = request.body.userId;
+    const {
+      firstName,
+      lastName,
+      city,
+      state,
+      profileImage,
+      phoneNumber,
+      email,
+    } = request.body;
+
+    if (!userId) {
+      response.status(400).json({ error: 'User ID is required' });
+      return;
+    }
+
+    console.log('[updateUserProfile] Received request with:', {
+      userId,
+      firstName,
+      lastName,
+      city,
+      state,
+      profileImage: profileImage ? 'image provided' : 'no image',
+      phoneNumber,
+      email,
+    });
+
+    const updateFields: { [key: string]: unknown } = {};
+    
+    if (firstName !== undefined) {
+      updateFields.firstName = firstName;
+    }
+    if (lastName !== undefined) {
+      updateFields.lastName = lastName;
+    }
+    if (city !== undefined) {
+      updateFields.city = city;
+    }
+    if (state !== undefined) {
+      updateFields.state = state;
+    }
+    if (profileImage !== undefined) {
+      updateFields.profileImage = profileImage;
+    }
+    if (phoneNumber !== undefined) {
+      updateFields.phone = phoneNumber;
+    }
+    if (email !== undefined) {
+      updateFields.emailAddress = email;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      response.status(400).json({ error: 'No fields to update' });
+      return;
+    }
+
+    const setClauses: string[] = [];
+    const params: { [key: string]: unknown } = { userId };
+
+    Object.entries(updateFields).forEach(([key, value], index) => {
+      const paramName = `val${index}`;
+      setClauses.push(`${key}=$` + `{${paramName}}`);
+      params[paramName] = value;
+    });
+
+    const query = `
+      UPDATE UserAccount 
+      SET ${setClauses.join(', ')}
+      WHERE id=$` + `{userId}
+      RETURNING id, firstName, lastName, city, state, emailAddress, profileImage, phone
+    `;
+
+    console.log('[updateUserProfile] Executing query:', query);
+    console.log('[updateUserProfile] With params:', params);
+
+    db.oneOrNone(query, params)
+      .then((data: unknown): void => {
+        if (data) {
+          console.log('[updateUserProfile] Update successful, returned data:', data);
           response.status(200).json(data);
         } else {
           console.log('[updateUserProfile] User not found with ID:', userId);
@@ -585,7 +692,7 @@ function readClippers(
               r.clipperID, 
               r.rating, 
               r.comment as "reviewContent",
-              r.createdAt as "date",
+              r.createdAt,
               COALESCE(u.firstName || ' ' || u.lastName, 'Anonymous') AS "reviewerName"
             FROM Review r
             LEFT JOIN Client cl ON r.clientID = cl.id
@@ -603,6 +710,7 @@ function readClippers(
         }),
       );
 
+      console.log('[readClippers] Response sample:', clippersWithImagesAndReviews[0]);
       response.send(clippersWithImagesAndReviews);
     })
     .catch((error: Error): void => {
@@ -621,7 +729,7 @@ function readClipper(
   db.oneOrNone(
     `SELECT 
       c.id, c.userid,
-      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.bio, u.profileImage,
+      u.firstName, u.lastName, u.emailAddress, u.city, u.state, u.address as address, u.bio, u.profileImage,
       p.shopName, p.shopAddress, p.description,
       COALESCE(AVG(r.rating), 0) as rating
     FROM Clipper c
