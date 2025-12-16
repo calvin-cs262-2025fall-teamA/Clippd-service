@@ -1101,7 +1101,11 @@ function readReviews(
 ): void {
   db.manyOrNone(
     `SELECT 
-      r.id, r.rating, r.comment, r.clientid, r.createdat,
+      r.id, 
+      r.rating, 
+      r.comment as "reviewContent",
+      r.clientid as "clientID", 
+      r.createdat,
       u.firstname || ' ' || u.lastname as "reviewerName",
       u.city as "reviewerCity"
     FROM review r
