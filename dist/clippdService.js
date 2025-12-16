@@ -1,25 +1,18 @@
 /**
- * This module implements a REST-inspired web service for the Clippd DB hosted
- * on PostgreSQL. Notes:
+ * @fileoverview Clippd REST API service backend
+ * @description Main backend service implementing REST API for Clippd application
+ * Handles user authentication, clipper management, services, portfolios, and reviews
+ * Built with Express.js and PostgreSQL
  *
- * - This service is written in TypeScript and uses Node type-stripping.
- * To do a static type check, run: npm run type-check
+ * Notes:
+ * - Written in TypeScript with Node type-stripping
+ * - Assumes database connection strings in environment variables (.env file)
+ * - Uses pgPromise for SQL injection protection via variable escaping
+ * - All endpoints use error handling via next(err) to prevent crashes
  *
- * - The service assumes that the database connection strings and the server
- * mode are set in environment variables (e.g., using a git-ignored `.env` file).
- * See the DB_* variables used by pgPromise.
- *
- * - To execute locally, run:
- *      npm start
- *
- * - To guard against SQL injection attacks, this code uses pgPromise's built-in
- * variable escaping. We don't use JS template strings because this doesn't filter
- * client-supplied values properly.
- *
- * - The endpoints call `next(err)` to handle errors without crashing the service.
- *
- * @author: Team A
- * @date: Fall, 2025
+ * @author Team A
+ * @version 1.0.0
+ * @date Fall, 2025
  */
 import express from 'express';
 import cors from 'cors';
@@ -131,12 +124,26 @@ function returnDataOr404(response, data) {
 /**
  * Root endpoint - health check
  */
+/**
+ * Health check endpoint for Clippd service
+ * @function readHello
+ * @param {Request} _request - Express request object (unused)
+ * @param {Response} response - Express response object
+ * @returns {void}
+ */
 function readHello(_request, response) {
   response.send('Hello, Clippd service!');
 }
 // ==================== AUTHENTICATION ====================
 /**
- * Sign up a new user
+ * Register a new user account with automatic role-based record creation
+ * Creates corresponding Client or Clipper record based on role
+ * @function signup
+ * @param {Request} request - Express request with body containing SignupInput
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void}
+ * @throws Will pass database errors to error handler
  */
 function signup(request, response, next) {
   // Provide defaults for optional fields using SignupInput interface
@@ -179,7 +186,12 @@ function signup(request, response, next) {
     });
 }
 /**
- * Login user - validate credentials
+ * Authenticate user with loginID and password
+ * Returns user info on success or error if credentials invalid
+ * @function login
+ * @param {Request} request - Express request with body containing {loginID, passWord}
+ * @param {Response} response - Express response object
+ * @returns {void} User object with id, firstName, lastName, role, emailAddress, city, state, profileImage
  */
 function login(request, response) {
   try {
@@ -214,14 +226,16 @@ function login(request, response) {
       .json({ error: 'Server error', message: error.message });
   }
 }
-/**
- * Update current authenticated user's profile
- * This endpoint is called by the logged-in user to update their own profile
- */
 // ==================== USER PROFILE ====================
 /**
  * Update current authenticated user's profile
- * This endpoint is called by the logged-in user to update their own profile
+ * Updates user account information (name, location, contact, profile image)
+ * @function updateUserProfile
+ * @param {Request} request - Express request with body containing {userId, firstName, lastName, city, state, profileImage, phoneNumber, email}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Updated user data or 400/404 error
+ * @throws Will pass database errors to error handler
  */
 function updateUserProfile(request, response, next) {
   try {
@@ -306,7 +320,13 @@ function updateUserProfile(request, response, next) {
 }
 // ==================== USER CRUD ====================
 /**
- * Get user by ID
+ * Retrieve a single user's account information by ID
+ * @function readUser
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} UserAccount object or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function readUser(request, response, next) {
   db.oneOrNone('SELECT * FROM UserAccount WHERE id=${id}', request.params)
@@ -318,7 +338,13 @@ function readUser(request, response, next) {
     });
 }
 /**
- * Update user information
+ * Update existing user account information
+ * @function updateUser
+ * @param {Request} request - Express request with params {id} and body with user fields to update
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Updated user object or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function updateUser(request, response, next) {
   const userId = request.params.id;
@@ -389,7 +415,13 @@ function updateUser(request, response, next) {
   }
 }
 /**
- * Delete user account
+ * Delete user account by ID
+ * @function deleteUser
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted user ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deleteUser(request, response, next) {
   db.oneOrNone('DELETE FROM UserAccount WHERE id=${id} RETURNING id', request.params)
@@ -402,6 +434,16 @@ function deleteUser(request, response, next) {
 }
 /**
  * Get all users (without sensitive fields)
+ */
+/**
+ * Retrieve all user accounts with public information
+ * Returns user list with id, firstName, lastName, role, emailAddress, city, state, profileImage
+ * @function readUsers
+ * @param {Request} _request - Express request object (unused)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of UserAccount objects
+ * @throws Will pass database errors to error handler
  */
 function readUsers(_request, response, next) {
   db.manyOrNone('SELECT id, firstName, lastName, role, emailAddress, city, state, profileImage FROM UserAccount')
@@ -465,7 +507,14 @@ function readClippers(_request, response, next) {
     });
 }
 /**
- * Get single clipper with details
+ * Retrieve single clipper by ID with portfolio images and reviews
+ * Includes calculated rating from reviews
+ * @function readClipper
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} ClipperWithDetails object or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function readClipper(request, response, next) {
   db.oneOrNone(`SELECT 
@@ -487,7 +536,13 @@ function readClipper(request, response, next) {
     });
 }
 /**
- * Create clipper profile (assumes user already exists)
+ * Create new clipper profile linked to existing user account
+ * @function createClipper
+ * @param {Request} request - Express request with body containing {userID}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New clipper object with {id}
+ * @throws Will pass database errors to error handler
  */
 function createClipper(request, response, next) {
   const { userID } = request.body;
@@ -502,7 +557,14 @@ function createClipper(request, response, next) {
     });
 }
 /**
- * Update clipper (updates associated user account)
+ * Update clipper profile information via associated user account
+ * Updates bio and profile image visible in clipper's public profile
+ * @function updateClipper
+ * @param {Request} request - Express request with params {id} and body with {bio, profileImage}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Updated user ID or 404 if clipper not found
+ * @throws Will pass database errors to error handler
  */
 function updateClipper(request, response, next) {
   db.oneOrNone(`UPDATE UserAccount 
@@ -521,6 +583,15 @@ function updateClipper(request, response, next) {
 }
 /**
  * Delete clipper profile
+/**
+ * Delete clipper profile
+ * Does not delete associated user account
+ * @function deleteClipper
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted clipper ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deleteClipper(request, response, next) {
   db.oneOrNone('DELETE FROM Clipper WHERE id=${id} RETURNING id', request.params)
@@ -533,7 +604,13 @@ function deleteClipper(request, response, next) {
 }
 // ==================== PORTFOLIO ====================
 /**
- * Get clipper's portfolio
+ * Retrieve clipper's portfolio containing shop information
+ * @function readPortfolio
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Portfolio object or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function readPortfolio(request, response, next) {
   db.oneOrNone('SELECT * FROM Portfolio WHERE clipperID=${id}', request.params)
@@ -545,7 +622,13 @@ function readPortfolio(request, response, next) {
     });
 }
 /**
- * Create portfolio for clipper
+ * Create portfolio for clipper with shop information and location
+ * @function createPortfolio
+ * @param {Request} request - Express request with params {id} and body with PortfolioInput fields
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New portfolio object with {id}
+ * @throws Will pass database errors to error handler
  */
 function createPortfolio(request, response, next) {
   const portfolioData = {
@@ -563,7 +646,13 @@ function createPortfolio(request, response, next) {
     });
 }
 /**
- * Update portfolio
+ * Update portfolio information including shop details and location coordinates
+ * @function updatePortfolio
+ * @param {Request} request - Express request with params {id} and body with PortfolioInput fields to update
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Updated portfolio ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function updatePortfolio(request, response, next) {
   db.oneOrNone(`UPDATE Portfolio 
@@ -583,7 +672,14 @@ function updatePortfolio(request, response, next) {
 }
 // ==================== PICTURES ====================
 /**
- * Get all pictures for a portfolio
+ * Retrieve all portfolio pictures for a clipper
+ * Ordered by most recent upload first
+ * @function readPictures
+ * @param {Request} request - Express request with params containing {id} (portfolio ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of Picture objects
+ * @throws Will pass database errors to error handler
  */
 function readPictures(request, response, next) {
   db.manyOrNone('SELECT * FROM Pictures WHERE portfolioID=${id} ORDER BY addedAt DESC', request.params)
@@ -595,7 +691,14 @@ function readPictures(request, response, next) {
     });
 }
 /**
- * Add picture to portfolio
+ * Add picture to clipper's portfolio
+ * Image stored as base64 string
+ * @function addPicture
+ * @param {Request} request - Express request with params {id} (portfolio ID) and body {image}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New picture object with {id}
+ * @throws Will pass database errors to error handler
  */
 function addPicture(request, response, next) {
   const { image } = request.body;
@@ -608,7 +711,13 @@ function addPicture(request, response, next) {
     });
 }
 /**
- * Delete picture
+ * Delete picture from portfolio
+ * @function deletePicture
+ * @param {Request} request - Express request with params containing {id} (picture ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted picture ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deletePicture(request, response, next) {
   db.oneOrNone('DELETE FROM Pictures WHERE id=${id} RETURNING id', request.params)
@@ -621,7 +730,13 @@ function deletePicture(request, response, next) {
 }
 // ==================== SERVICES ====================
 /**
- * Get all services for a clipper
+ * Retrieve all services offered by a clipper
+ * @function readServices
+ * @param {Request} request - Express request with params containing {id} (clipper ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of Service objects
+ * @throws Will pass database errors to error handler
  */
 function readServices(request, response, next) {
   db.manyOrNone('SELECT * FROM Service WHERE clipperID=${id}', request.params)
@@ -634,6 +749,13 @@ function readServices(request, response, next) {
 }
 /**
  * Add service for clipper
+ * Creates new service offering with price and duration
+ * @function addService
+ * @param {Request} request - Express request with params {id} (clipper ID) and body with ServiceInput fields
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New service object with {id}
+ * @throws Will pass database errors to error handler
  */
 function addService(request, response, next) {
   const serviceData = {
@@ -649,7 +771,14 @@ function addService(request, response, next) {
     });
 }
 /**
- * Update service
+ * Update service offering information
+ * Updates service name, price, and duration
+ * @function updateService
+ * @param {Request} request - Express request with params {id} and body with service fields to update
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Updated service ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function updateService(request, response, next) {
   db.oneOrNone(`UPDATE Service 
@@ -667,7 +796,13 @@ function updateService(request, response, next) {
     });
 }
 /**
- * Delete service
+ * Delete service offering
+ * @function deleteService
+ * @param {Request} request - Express request with params containing {id}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted service ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deleteService(request, response, next) {
   db.oneOrNone('DELETE FROM Service WHERE id=${id} RETURNING id', request.params)
@@ -680,11 +815,22 @@ function deleteService(request, response, next) {
 }
 // ==================== REVIEWS ====================
 /**
- * Get all reviews for a clipper
+ * Retrieve all reviews for a clipper with reviewer information
+ * Includes rating, comment, reviewer name, and reviewer city
+ * @function readReviews
+ * @param {Request} request - Express request with params containing {id} (clipper ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of ReviewWithDetails objects
+ * @throws Will pass database errors to error handler
  */
 function readReviews(request, response, next) {
   db.manyOrNone(`SELECT 
-      r.id, r.rating, r.comment, r.clientid, r.createdat,
+      r.id, 
+      r.rating, 
+      r.comment as "reviewContent",
+      r.clientid as "clientID", 
+      r.createdat,
       u.firstname || ' ' || u.lastname as "reviewerName",
       u.city as "reviewerCity"
     FROM review r
@@ -702,6 +848,13 @@ function readReviews(request, response, next) {
 }
 /**
  * Add review for clipper
+ * Accepts either clientID or userID, calculates average rating after submission
+ * @function addReview
+ * @param {Request} request - Express request with body containing ReviewInput fields (clientID or userID, clipperID, rating, comment)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New review with {id, averageRating}
+ * @throws Will pass database errors to error handler
  */
 function addReview(request, response, next) {
   const { clientID, userID, clipperID, rating, comment } = request.body;
@@ -741,10 +894,14 @@ function addReview(request, response, next) {
     });
 }
 /**
- * Update review (rating and comment)
- */
-/**
  * Delete review
+ * Removes review and recalculates clipper's average rating
+ * @function deleteReview
+ * @param {Request} request - Express request with params containing {id} (review ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted review ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deleteReview(request, response, next) {
   const { id } = request.params;
@@ -776,7 +933,14 @@ function deleteReview(request, response, next) {
 }
 // ==================== FAVORITES ====================
 /**
- * Get all favorite clippers for a client
+ * Retrieve all favorite clippers for a client
+ * Returns clippers with basic info, shop name, and average rating
+ * @function readFavorites
+ * @param {Request} request - Express request with params containing {id} (client ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of ClipperWithDetails objects sorted by favorited date
+ * @throws Will pass database errors to error handler
  */
 function readFavorites(request, response, next) {
   db.manyOrNone(`SELECT 
@@ -801,7 +965,13 @@ function readFavorites(request, response, next) {
     });
 }
 /**
- * Add clipper to favorites
+ * Add clipper to client's favorites
+ * @function addFavorite
+ * @param {Request} request - Express request with params containing {clientId, clipperId}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Favorite relationship with {clientID, clipperID}
+ * @throws Will pass database errors to error handler
  */
 function addFavorite(request, response, next) {
   db.one('INSERT INTO FavoriteClippers(clientID, clipperID) VALUES (${clientId}, ${clipperId}) RETURNING clientID, clipperID', request.params)
@@ -813,7 +983,13 @@ function addFavorite(request, response, next) {
     });
 }
 /**
- * Remove clipper from favorites
+ * Remove clipper from client's favorites
+ * @function removeFavorite
+ * @param {Request} request - Express request with params containing {clientId, clipperId}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted favorite relationship with {clientID, clipperID}
+ * @throws Will pass database errors to error handler
  */
 function removeFavorite(request, response, next) {
   db.oneOrNone('DELETE FROM FavoriteClippers WHERE clientID=${clientId} AND clipperID=${clipperId} RETURNING clientID', request.params)
@@ -825,16 +1001,29 @@ function removeFavorite(request, response, next) {
     });
 }
 // ==================== SPECIALTIES ====================
-/*
- * Get all specialties for a clipper
+/**
+ * Retrieve all hair specialties for a clipper
+ * @function readSpecialties
+ * @param {Request} request - Express request with params containing {id} (clipper ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Array of Specialty objects
+ * @throws Will pass database errors to error handler
  */
 function readSpecialties(request, response, next) {
   db.manyOrNone('SELECT * FROM Specialty WHERE clipperID=${id}', request.params)
     .then((data) => response.send(data))
     .catch(next);
 }
-/*
- * Add specialty for a clipper
+/**
+ * Add hair specialty for a clipper
+ * Indicates specific hair types the clipper specializes in
+ * @function addSpecialty
+ * @param {Request} request - Express request with params {id} (clipper ID) and body {hairType}
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} New specialty object with {id}
+ * @throws Will pass database errors to error handler
  */
 function addSpecialty(request, response, next) {
   const data = {
@@ -845,8 +1034,14 @@ function addSpecialty(request, response, next) {
     .then((data) => response.send(data))
     .catch(next);
 }
-/*
- * Delete specialty
+/**
+ * Delete hair specialty
+ * @function deleteSpecialty
+ * @param {Request} request - Express request with params containing {id} (specialty ID)
+ * @param {Response} response - Express response object
+ * @param {NextFunction} next - Express next middleware function for error handling
+ * @returns {void} Deleted specialty ID or 404 if not found
+ * @throws Will pass database errors to error handler
  */
 function deleteSpecialty(request, response, next) {
   db.oneOrNone('DELETE FROM Specialty WHERE id=${id} RETURNING id', request.params)
